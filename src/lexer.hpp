@@ -36,10 +36,44 @@ public:
 
         switch (_cur_char) {
         case '=':
-            cur_token.set(token::ASSIGN, cur_char);
+            if(peek_char() == '='){
+                read_char();
+                cur_token.set(token::EQ, "==");
+            } else {
+                cur_token.set(token::ASSIGN, cur_char);
+            }
+            break;
+        case '+':
+            cur_token.set(token::PLUS, cur_char);
+            break;
+        case '-':
+            cur_token.set(token::MINUS, cur_char);
+            break;
+        case '*':
+            cur_token.set(token::ASTERISK, cur_char);
+            break;
+        case '/':
+            cur_token.set(token::SLASH, cur_char);
+            break;
+        case ',':
+            cur_token.set(token::COMMA, cur_char);
             break;
         case ';':
             cur_token.set(token::SEMICOLON, cur_char);
+            break;
+        case '!':
+            if(peek_char() == '='){
+                read_char();
+                cur_token.set(token::NEQ, "!=");
+            } else {
+                cur_token.set(token::BANG, cur_char);
+            }
+            break;
+        case '>':
+            cur_token.set(token::GT, cur_char);
+            break;
+        case '<':
+            cur_token.set(token::LT, cur_char);
             break;
         case '(':
             cur_token.set(token::LPAREN, cur_char);
@@ -52,12 +86,6 @@ public:
             break;
         case '}':
             cur_token.set(token::RBRACE, cur_char);
-            break;
-        case ',':
-            cur_token.set(token::COMMA, cur_char);
-            break;
-        case '+':
-            cur_token.set(token::PLUS, cur_char);
             break;
         case 0:
             cur_token.set(token::EOFT, "");
@@ -76,6 +104,14 @@ public:
         
         return cur_token;
     }
+
+    char peek_char() const noexcept {
+        if(_peek_cursor >= _input_len) {   
+            return 0;
+        } else {
+            return _input[_peek_cursor];
+        }
+    }
     
     bool is_letter(char ch) const noexcept {
         return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_';
@@ -89,7 +125,7 @@ public:
 
     std::string_view read_identifier() noexcept {
         std::uint32_t start = _cursor;
-        while(is_letter(_input[_peek_cursor])) { 
+        while(is_letter(peek_char())) { 
             read_char(); 
         }
         std::string_view identifier(_input + start, _cursor - start + 1);
@@ -99,7 +135,7 @@ public:
 
     std::string_view read_digits() noexcept {
         std::uint32_t start = _cursor;
-        while(std::isdigit(_input[_peek_cursor])) { 
+        while(std::isdigit(peek_char())) { 
             read_char(); 
         }
         std::string_view digits(_input + start, _cursor - start + 1);
