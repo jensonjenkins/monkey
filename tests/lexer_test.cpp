@@ -31,19 +31,19 @@ void test_next_token_1() {
     token::token cur_token;
     for(int i = 0; i < test_case.size(); i++) {
         cur_token = l.next_token();
-        if(test_case[i].expected_token != cur_token._type){
+        if(test_case[i].expected_token != cur_token.get_type()){
             std::cout << "test_next_token_1 - expected token: "
                 << test_case[i].expected_token
                 << ", got: "
-                << cur_token._type
+                << cur_token.get_type()
                 << std::endl;
             exit(EXIT_FAILURE);
         }
-        if(std::string_view(test_case[i].expected_literal) != cur_token._literal){
+        if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_1 - expected literal: "
                 << *test_case[i].expected_literal
                 << ", got: "
-                << cur_token._literal
+                << cur_token.get_type()
                 << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -110,19 +110,19 @@ void test_next_token_2() {
     token::token cur_token;
     for(int i = 0; i < test_case.size(); i++) {
         cur_token = l.next_token();
-        if(test_case[i].expected_token != cur_token._type){
+        if(test_case[i].expected_token != cur_token.get_type()){
             std::cout << "test_next_token_2 - expected token: "
                 << test_case[i].expected_token
                 << ", got: "
-                << cur_token._type
+                << cur_token.get_type()
                 << std::endl;
             exit(EXIT_FAILURE);
         }
-        if(std::string_view(test_case[i].expected_literal) != cur_token._literal){
+        if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_2 - expected literal: "
                 << *test_case[i].expected_literal
                 << ", got: "
-                << cur_token._literal
+                << cur_token.token_literal()
                 << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -156,19 +156,19 @@ void test_next_token_3() {
     token::token cur_token;
     for(int i = 0; i < test_case.size(); i++) {
         cur_token = l.next_token();
-        if(test_case[i].expected_token != cur_token._type){
+        if(test_case[i].expected_token != cur_token.get_type()){
             std::cout << "test_next_token_3 - expected token: "
                 << test_case[i].expected_token
                 << ", got: "
-                << cur_token._type
+                << cur_token.get_type()
                 << std::endl;
             exit(EXIT_FAILURE);
         }
-        if(std::string_view(test_case[i].expected_literal) != cur_token._literal){
+        if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_3 - expected literal: "
                 << *test_case[i].expected_literal
                 << ", got: "
-                << cur_token._literal
+                << cur_token.token_literal()
                 << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -222,19 +222,19 @@ void test_next_token_4() {
     token::token cur_token;
     for(int i = 0; i < test_case.size(); i++) {
         cur_token = l.next_token();
-        if(test_case[i].expected_token != cur_token._type){
+        if(test_case[i].expected_token != cur_token.get_type()){
             std::cout << "test_next_token_4 - expected token: "
                 << test_case[i].expected_token
                 << ", got: "
-                << cur_token._type
+                << cur_token.token_literal()
                 << std::endl;
             exit(EXIT_FAILURE);
         }
-        if(std::string_view(test_case[i].expected_literal) != cur_token._literal){
+        if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_4 - expected literal: "
                 << *test_case[i].expected_literal
                 << ", got: "
-                << cur_token._literal
+                << cur_token.token_literal()
                 << std::endl;
             exit(EXIT_FAILURE);
         }

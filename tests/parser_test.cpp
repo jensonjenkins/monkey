@@ -21,7 +21,7 @@ void test_let_statement_1() {
     if(program == nullptr) {
         std::cout<<"test_let_statement_1 - parse_program() returned nullptr."<<std::endl;
     }
-    if(program->_statements.size() != 3) {
+    if(program->get_statements().size() != 3) {
         std::cout<<"test_let_statement_1 - incorrect number of program statements."<<std::endl;
     }
 
@@ -37,7 +37,7 @@ void test_let_statement_1() {
             std::cout<<"test_let_statement_1 - token_literal() not let."<<std::endl;
             return false;
         }
-        if(ls->get_ident().token_literal() != name) {
+    if(ls->get_ident().token_literal() != name) {
             std::cout<<"test_let_statement_1 - s identifier token_literal not equal to "<<name<<std::endl;
             return false;
         }
