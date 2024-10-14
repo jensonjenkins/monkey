@@ -3,7 +3,8 @@
 #include "token.hpp"
 #include "ast.hpp"
 #include "lexer.hpp"
-
+#include <sstream>
+#include <string>
 
 namespace parser {
 
@@ -43,6 +44,9 @@ public:
         case token::LET:
             return parse_let_statement();
             break;
+        case token::RETURN:
+            return parse_return_statement();
+            break;
         default:
             return nullptr;
         }
@@ -71,12 +75,24 @@ public:
         return stmt;
     }
 
+    ast::return_statement* parse_return_statement() noexcept {
+        ast::return_statement* stmt = new ast::return_statement(_cur_token);
+
+        next_token();
+
+        while(!cur_token_is(token::SEMICOLON)){
+            next_token();
+        }
+
+        return stmt;
+    }
+
     bool cur_token_is(token::token_t token_type) noexcept {
         return _cur_token.get_type() == token_type;
     }
 
     bool peek_token_is(token::token_t token_type) noexcept {
-        return _peek_token.get_type() == token_type;
+        return _peek_token.get_type() == token_type; 
     }
 
     bool expect_peek(token::token_t token_type) noexcept {
@@ -84,14 +100,28 @@ public:
             next_token();
             return true;
         }else{
+            peek_error(token_type);
             return false;
         }
     }
+    
+    std::vector<std::string> errors() const noexcept { return _errors; }
+
+    void peek_error(token::token_t token_type) noexcept {
+        std::ostringstream oss;
+        oss << "expected next token to be " 
+            << token::inv_map[token_type]
+            << ", got " 
+            << token::inv_map[_peek_token.get_type()]
+            << " instead.";
+        _errors.push_back(oss.str());
+    }
 
 protected:
-    lexer::lexer _l;
-    token::token _cur_token;
-    token::token _peek_token;
+    lexer::lexer                _l;
+    token::token                _cur_token;
+    token::token                _peek_token;
+    std::vector<std::string>    _errors;
 };
 
 } // namespace parser

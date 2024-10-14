@@ -17,7 +17,7 @@ struct statement : node {
 };
 
 struct expression : node {
-    virtual std::string_view token_literal() const noexcept  = 0;
+    virtual std::string_view token_literal() const noexcept = 0;
 };
 
 class program : public node {
@@ -28,7 +28,7 @@ public:
         } else {
             return "";
         }
-    };
+    }
 
     const std::vector<std::unique_ptr<ast::statement>>& get_statements() const noexcept { 
         return _statements; 
@@ -73,9 +73,7 @@ public:
     let_statement(const let_statement& other) noexcept = delete;
     let_statement& operator=(const let_statement& other) noexcept = delete;
 
-    std::string_view token_literal() const noexcept override {
-        return _token.token_literal();
-    };
+    std::string_view token_literal() const noexcept override { return _token.token_literal(); }
 
     const ast::identifier& get_ident() const noexcept { return _ident; }
     const token::token& get_token() const noexcept { return _token; }
@@ -83,6 +81,16 @@ public:
 protected:
     token::token                _token;
     ast::identifier             _ident;
+    std::unique_ptr<expression> _value;
+};
+
+class return_statement : public statement { 
+public:
+    return_statement(token::token token) noexcept : _token(token) {}
+    std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    
+protected:
+    token::token                _token;
     std::unique_ptr<expression> _value;
 };
 
