@@ -120,6 +120,8 @@ int main(){
     parser::test_let_statement_1();
     parser::test_return_statement_1();
 
+    std::cout<<"parser_test.cpp: ok"<<std::endl;
+
     exit(EXIT_SUCCESS);
 }
 

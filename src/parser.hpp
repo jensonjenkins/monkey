@@ -104,7 +104,7 @@ public:
             return false;
         }
     }
-    
+ 
     std::vector<std::string> errors() const noexcept { return _errors; }
 
     void peek_error(token::token_t token_type) noexcept {
@@ -119,9 +119,10 @@ public:
 
 protected:
     lexer::lexer                _l;
+    std::vector<std::string>    _errors;
+
     token::token                _cur_token;
     token::token                _peek_token;
-    std::vector<std::string>    _errors;
 };
 
 } // namespace parser

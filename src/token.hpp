@@ -7,7 +7,7 @@
 
 namespace token { 
 
-using token_t = std::uint32_t;
+using token_t = std::uint8_t;
 
 constexpr token_t ILLEGAL   = 0;
 constexpr token_t EOFT      = 1;

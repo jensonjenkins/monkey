@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -43,6 +44,9 @@ public:
     const std::vector<std::unique_ptr<ast::statement>>& get_statements() const noexcept { 
         return _statements; 
     }
+    void add_statement(ast::statement* stmt) noexcept { 
+        _statements.push_back(std::unique_ptr<ast::statement>(stmt)); 
+    }
     void add_statement(std::unique_ptr<ast::statement>&& stmt) noexcept { 
         _statements.push_back(std::move(stmt)); 
     }
@@ -80,6 +84,8 @@ public:
     void move_ident(ast::identifier&& ident) { 
         _ident = std::move(ident);
     }
+
+    void move_value(ast::expression* expr) noexcept { _value = std::unique_ptr<expression>(expr); }
 
     let_statement(const let_statement& other) noexcept = delete;
     let_statement& operator=(const let_statement& other) noexcept = delete;

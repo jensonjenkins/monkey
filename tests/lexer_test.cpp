@@ -253,6 +253,8 @@ int main(int argc, char* argv[]) {
     lexer::test_next_token_3();
     lexer::test_next_token_4();
 
+    std::cout<<"lexer_test.cpp: ok"<<std::endl;
+
     exit(EXIT_SUCCESS);
 }
 
