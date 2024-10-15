@@ -71,8 +71,8 @@ public:
         _literal = lit;
     }
 
-    std::string_view token_literal() const noexcept { return _literal; }
-    token_t get_type() const noexcept { return _type; }
+    const std::string_view token_literal() const noexcept { return _literal; }
+    const token_t get_type() const noexcept { return _type; }
 
 private:
     token_t             _type;

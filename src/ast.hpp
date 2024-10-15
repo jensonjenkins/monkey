@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -131,6 +130,7 @@ protected:
 
 class expression_statement : public statement {
 public:    
+    expression_statement(token::token token) noexcept : _token(token) {}
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { 
         std::string buf;
@@ -139,6 +139,10 @@ public:
         }
         return buf; 
     }
+
+    void move_expr(ast::expression* expr) noexcept { _expr = std::unique_ptr<expression>(expr); }
+    expression* expr() const noexcept { return _expr.get(); } // not const, might cause trouble?
+
 protected:
     token::token                _token; // first token of the expression
     std::unique_ptr<expression> _expr;

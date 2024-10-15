@@ -111,6 +111,45 @@ void test_return_statement_1() {
     std::cout<<"2 - ok: parse return statements with int rvalues."<<std::endl;
 }
 
+void test_identifier_expression_1() {
+    const char* input = "foobar;";
+
+    lexer::lexer l(input);
+    parser p(l);
+    
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+    
+    if(program->get_statements().size() != 1) {
+        std::cout<<"test_ident_expr_1 - statements.size() not 1, got "
+            <<program->get_statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    ast::statement* s = program->get_statements()[0].get();
+    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+    if(es == nullptr) {
+        std::cout<<"test_ident_expr_1 - statement not expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression* e = es->expr();
+    ast::identifier* ident = dynamic_cast<ast::identifier*>(e);
+    
+    if(ident == nullptr) {
+        std::cout<<"test_ident_expr_1 - expression not an identifier."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(ident->token_literal() == "foobar") {
+        std::cout<<"test_ident_expr_1 - token literal not foobar, got "
+            <<ident->token_literal()<<std::endl;
+        exit(EXIT_FAILURE);
+    } 
+    std::cout<<"3 - ok: parse expression statement with identifier."<<std::endl;
+}
+
 } //namespace parser
 
 
@@ -119,6 +158,7 @@ int main(){
     
     parser::test_let_statement_1();
     parser::test_return_statement_1();
+    parser::test_identifier_expression_1();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

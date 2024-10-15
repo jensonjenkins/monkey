@@ -9,5 +9,3 @@ include_directories(src)
 add_executable(lexer_test tests/lexer_test.cpp)
 add_executable(parser_test tests/parser_test.cpp)
 add_executable(ast_test tests/ast_test.cpp)
-
-

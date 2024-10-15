@@ -3,10 +3,22 @@
 #include "token.hpp"
 #include "ast.hpp"
 #include "lexer.hpp"
+#include <cstdint>
 #include <sstream>
 #include <string>
+#include <type_traits>
 
 namespace parser {
+
+using precedence = uint8_t;
+
+constexpr precedence LOWEST         = 0; // placeholder only
+constexpr precedence EQUALS         = 1; // ==
+constexpr precedence LESSGREATER    = 2; // < or >
+constexpr precedence SUM            = 3; // + 
+constexpr precedence PRODUCT        = 4; // *
+constexpr precedence PREFIX         = 5; // -var or !var
+constexpr precedence CALL           = 6; // my_fn(var)
 
 class parser {
 public:
@@ -21,7 +33,7 @@ public:
     }
 
     /**
-     * NOTE: Caller is responsible for management of ast::let_statement*
+     * NOTE: Caller is responsible for management of ast::program*
      */
     ast::program* parse_program() noexcept {
         ast::program* program = new ast::program();
@@ -48,13 +60,10 @@ public:
             return parse_return_statement();
             break;
         default:
-            return nullptr;
+            return parse_expr_statement();
         }
     }
 
-    /**
-     * NOTE: Caller is responsible for management of ast::let_statement*
-     */
     ast::let_statement* parse_let_statement() noexcept {
         ast::let_statement* stmt = new ast::let_statement(_cur_token);
 
@@ -85,6 +94,22 @@ public:
         }
 
         return stmt;
+    }
+
+    ast::expression_statement* parse_expr_statement() noexcept {
+        ast::expression_statement* stmt = new ast::expression_statement(_cur_token);
+
+        stmt->move_expr(parse_expr(LOWEST));
+        
+        if(peek_token_is(token::SEMICOLON)) {
+            next_token();
+        }
+
+        return stmt;
+    }
+
+    ast::expression* parse_expr(precedence p) noexcept {
+        return nullptr;
     }
 
     bool cur_token_is(token::token_t token_type) noexcept {
