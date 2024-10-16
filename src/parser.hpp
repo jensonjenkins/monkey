@@ -22,6 +22,9 @@ constexpr precedence CALL           = 6; // my_fn(var)
 
 class parser {
 public:
+    using prefix_parse_fn_t = std::function<ast::expression*()>;
+    using infix_parse_fn_t = std::function<ast::expression*(ast::expression*)>;
+
     void next_token() noexcept {
         _cur_token = _peek_token;
         _peek_token = _l.next_token();
@@ -30,6 +33,8 @@ public:
     parser(lexer::lexer l) noexcept : _l(l) {
         next_token();
         next_token(); // initialize both _cur and _peek tokens
+
+        register_prefix_fn(token::IDENT, [this]() -> ast::expression* { return this->parse_identifier(); });
     }
 
     /**
@@ -109,7 +114,20 @@ public:
     }
 
     ast::expression* parse_expr(precedence p) noexcept {
-        return nullptr;
+        prefix_parse_fn_t prefix_fn = _prefix_parse_fn_map[_cur_token.get_type()];
+        
+        if(prefix_fn == nullptr){
+            return nullptr;
+        }
+
+        ast::expression* left_expr = prefix_fn();
+        
+        return left_expr;
+    }
+
+    ast::expression* parse_identifier() noexcept {
+        ast::expression* ident = new ast::identifier(_cur_token, _cur_token.token_literal());
+        return ident;
     }
 
     bool cur_token_is(token::token_t token_type) noexcept {
@@ -142,12 +160,24 @@ public:
         _errors.push_back(oss.str());
     }
 
+    void register_prefix_fn(token::token_t token_type, prefix_parse_fn_t prefix_parse_fn) noexcept {
+        _prefix_parse_fn_map[token_type] = prefix_parse_fn;
+    }
+
+    void register_infix_fn(token::token_t token_type, infix_parse_fn_t infix_parse_fn) noexcept {
+        _infix_parse_fn_map[token_type] = infix_parse_fn;
+    }
+
 protected:
     lexer::lexer                _l;
     std::vector<std::string>    _errors;
 
     token::token                _cur_token;
     token::token                _peek_token;
+
+    std::array<prefix_parse_fn_t, token::token_count>   _prefix_parse_fn_map;
+    std::array<infix_parse_fn_t, token::token_count>    _infix_parse_fn_map;
+    
 };
 
 } // namespace parser

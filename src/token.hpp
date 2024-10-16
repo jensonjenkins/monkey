@@ -8,6 +8,7 @@
 namespace token { 
 
 using token_t = std::uint8_t;
+constexpr size_t token_count = 27;
 
 constexpr token_t ILLEGAL   = 0;
 constexpr token_t EOFT      = 1;
@@ -52,7 +53,7 @@ const std::unordered_map<std::string_view, token_t> keywords {
     {"return", RETURN},
 }; 
 
-const std::array<std::string_view, 27> inv_map {
+const std::array<std::string_view, token_count> inv_map {
     "ILLEGAL", "EOFT", 
     "IDENT", "INT", 
     "ASSIGN", "PLUS", "MINUS", "ASTERISK", "SLASH", 

@@ -142,7 +142,7 @@ void test_identifier_expression_1() {
         exit(EXIT_FAILURE);
     }
 
-    if(ident->token_literal() == "foobar") {
+    if(ident->token_literal() != "foobar") {
         std::cout<<"test_ident_expr_1 - token literal not foobar, got "
             <<ident->token_literal()<<std::endl;
         exit(EXIT_FAILURE);
