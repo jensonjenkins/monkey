@@ -15,7 +15,7 @@ void check_parser_errors(parser p) {
     exit(EXIT_FAILURE);
 }
 
-void test_let_statement_1() {
+void test_let_statement() {
     const char* input = R"(
     let x = 5;
     let y = 10;
@@ -67,7 +67,7 @@ void test_let_statement_1() {
     std::cout<<"1 - ok: parse let statements with int rvalues."<<std::endl;
 }
 
-void test_return_statement_1() {
+void test_return_statement() {
     const char* input = R"(
     return 5;
     return 10;
@@ -111,7 +111,7 @@ void test_return_statement_1() {
     std::cout<<"2 - ok: parse return statements with int rvalues."<<std::endl;
 }
 
-void test_identifier_expression_1() {
+void test_identifier_expression() {
     const char* input = "foobar;";
 
     lexer::lexer l(input);
@@ -150,15 +150,55 @@ void test_identifier_expression_1() {
     std::cout<<"3 - ok: parse expression statement with identifier."<<std::endl;
 }
 
+void test_integer_literal_expression() {
+    const char* input = "5;";
+
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+    
+    if(program->get_statements().size() != 1) {
+        std::cout<<"test_int_literal_expr - statements.size() not 1, got "
+            <<program->get_statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    ast::statement* s = program->get_statements()[0].get();
+    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+    if(es == nullptr) {
+        std::cout<<"test_int_literal_expr - statement not expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression* e = es->expr();
+    ast::int_literal* ident = dynamic_cast<ast::int_literal*>(e);
+    
+    if(ident == nullptr) {
+        std::cout<<"test_int_literal_expr - expression not an int literal."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(ident->token_literal() != "5") {
+        std::cout<<"test_int_literal_expr - token literal not foobar, got "
+            <<ident->token_literal()<<std::endl;
+        exit(EXIT_FAILURE);
+    } 
+    
+    std::cout<<"4 - ok: parse integer literal rvalue."<<std::endl;
+}
+
 } //namespace parser
 
 
 int main(){
     std::cout<<"Running parser_test.cpp..."<<std::endl;
     
-    parser::test_let_statement_1();
-    parser::test_return_statement_1();
-    parser::test_identifier_expression_1();
+    parser::test_let_statement();
+    parser::test_return_statement();
+    parser::test_identifier_expression();
+    parser::test_integer_literal_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

@@ -148,5 +148,24 @@ protected:
     std::unique_ptr<expression> _expr;
 };
 
+class int_literal : public expression {
+public:    
+    int_literal() noexcept = default;
+    int_literal(token::token token, std::int64_t value) noexcept : _token(token), _value(value) {}
+
+    int_literal(const int_literal& other) noexcept = delete;
+    int_literal& operator=(const int_literal& other) noexcept = delete;
+    int_literal(int_literal&& other) noexcept = default;
+    int_literal& operator=(int_literal&& other) noexcept = default;
+
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override { return std::to_string(_value); }
+
+
+protected:
+    token::token    _token; 
+    std::int64_t    _value;
+};
+
 } // namespace ast
 

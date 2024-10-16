@@ -35,6 +35,7 @@ public:
         next_token(); // initialize both _cur and _peek tokens
 
         register_prefix_fn(token::IDENT, [this]() -> ast::expression* { return this->parse_identifier(); });
+        register_prefix_fn(token::INT, [this]() -> ast::expression* { return this->parse_int_literal(); });
     }
 
     /**
@@ -116,7 +117,7 @@ public:
     ast::expression* parse_expr(precedence p) noexcept {
         prefix_parse_fn_t prefix_fn = _prefix_parse_fn_map[_cur_token.get_type()];
         
-        if(prefix_fn == nullptr){
+        if(prefix_fn == nullptr) {
             return nullptr;
         }
 
@@ -130,13 +131,15 @@ public:
         return ident;
     }
 
-    bool cur_token_is(token::token_t token_type) noexcept {
-        return _cur_token.get_type() == token_type;
+    ast::expression* parse_int_literal() {
+        std::int64_t val = std::stoll(std::string(_cur_token.token_literal()));
+        ast::expression* lit = new ast::int_literal(_cur_token, val); 
+        return lit;
     }
 
-    bool peek_token_is(token::token_t token_type) noexcept {
-        return _peek_token.get_type() == token_type; 
-    }
+    bool cur_token_is(token::token_t token_type) noexcept { return _cur_token.get_type() == token_type; }
+
+    bool peek_token_is(token::token_t token_type) noexcept { return _peek_token.get_type() == token_type; }
 
     bool expect_peek(token::token_t token_type) noexcept {
         if(peek_token_is(token_type)){
