@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 
@@ -189,6 +190,79 @@ void test_integer_literal_expression() {
     std::cout<<"4 - ok: parse integer literal rvalue."<<std::endl;
 }
 
+void test_integer_literal(ast::expression* il, std::int64_t value) {
+    ast::int_literal* int_lit = dynamic_cast<ast::int_literal*>(il);
+
+    if(int_lit == nullptr) {
+        std::cout<<"test_integer_literal - expression not an integer literal."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(int_lit->value() != value) {
+        std::cout<<"test_integer_literal - int_lit->value() not "<<value<<", got "<<int_lit->value()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(int_lit->token_literal() != std::to_string(value)) {
+        std::cout<<"test_integer_literal - int_lit token_literal not "<<std::to_string(value)
+            <<", got "<<int_lit->token_literal()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+};
+
+void test_parsing_prefix_expression() {
+    struct test_case {
+        const char*     input;
+        const char*     op;
+        std::int64_t    int_value;
+        test_case(const char* input, const char* op, std::int64_t int_value) :
+            input(input), op(op), int_value(int_value) {};
+    };
+    std::vector<test_case> prefix_test {
+        {"!6;", "!", 6},
+        {"-15;", "-", 15}
+    };
+
+    for(int i=0;i<2;i++) {
+        test_case tc = prefix_test[i];
+        lexer::lexer l(tc.input);
+        parser p(l);
+        ast::program* program = p.parse_program();
+        check_parser_errors(p);
+
+        if(program->get_statements().size() != 1) {
+            std::cout<<"test_parse_prefix - statements.size() not 1, got "
+                <<program->get_statements().size()<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::statement* s = program->get_statements()[0].get();
+        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+        if(es == nullptr) {
+            std::cout<<"test_parse_prefix - statement not expression statement."<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::expression* e = es->expr();
+        ast::prefix_expression* pf = dynamic_cast<ast::prefix_expression*>(e);
+
+        if(pf == nullptr) {
+            std::cout<<"test_parse_prefix - expression not a prefix expression."<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        if(pf->op() != tc.op) {
+            std::cout<<"test_parse_prefix - op not "<<tc.op<<", got "<<pf->op()<<std::endl;
+            exit(EXIT_FAILURE);
+        } 
+
+        test_integer_literal(pf->expr(), tc.int_value);
+    }
+    std::cout<<"5 - ok: parse prefix with ints."<<std::endl;
+}
+
+
 } //namespace parser
 
 
@@ -199,6 +273,7 @@ int main(){
     parser::test_return_statement();
     parser::test_identifier_expression();
     parser::test_integer_literal_expression();
+    parser::test_parsing_prefix_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <array>
-#include <string_view>
+#include <string>
 
 namespace token { 
 
@@ -53,7 +53,7 @@ const std::unordered_map<std::string_view, token_t> keywords {
     {"return", RETURN},
 }; 
 
-const std::array<std::string_view, token_count> inv_map {
+const std::array<std::string, token_count> inv_map {
     "ILLEGAL", "EOFT", 
     "IDENT", "INT", 
     "ASSIGN", "PLUS", "MINUS", "ASTERISK", "SLASH", 
@@ -65,19 +65,20 @@ const std::array<std::string_view, token_count> inv_map {
 class token {
 public: 
     token() = default;
-    token(token_t t, std::string_view lit) noexcept : _type(t), _literal(lit) {};
+    token(token_t t, const char* lit) noexcept : _type(t), _literal(lit) {};
+    token(token_t t, std::string lit) noexcept : _type(t), _literal(lit) {};
+    token(token_t t, std::string_view lit) noexcept : _type(t), _literal(std::string(lit)) {};
 
-    void set(token_t t, std::string_view lit) noexcept {
-        _type = t;
-        _literal = lit;
-    }
+    void set(token_t t, const char* lit) noexcept { _type = t; _literal = lit; }
+    void set(token_t t, std::string lit) noexcept { _type = t; _literal = lit; }
+    void set(token_t t, std::string_view lit) noexcept { _type = t; _literal = lit; }
 
     const std::string_view token_literal() const noexcept { return _literal; }
     const token_t get_type() const noexcept { return _type; }
 
 private:
-    token_t             _type;
-    std::string_view    _literal;
+    token_t     _type;
+    std::string _literal;
 };
 
 }

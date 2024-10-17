@@ -73,7 +73,7 @@ public:
 
 protected:
     token::token         _token;
-    std::string_view     _value;
+    std::string          _value;
 };
 
 class let_statement : public statement {
@@ -160,11 +160,36 @@ public:
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { return std::to_string(_value); }
-
+    std::int64_t value() const noexcept { return _value; }
 
 protected:
     token::token    _token; 
     std::int64_t    _value;
+};
+
+class prefix_expression : public expression {
+public:
+    prefix_expression() noexcept = default;
+    prefix_expression(token::token token, std::string_view op) noexcept : _token(token), _op(op) {}
+    
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        buf += "(";
+        buf += std::string(_op);
+        buf += _expr->to_string();
+        buf += ")";
+        return buf;
+    }
+
+    std::string_view op() const noexcept { return _op; }
+    expression* expr() const noexcept { return _expr; }
+    void set_expr(ast::expression* expr) noexcept { this->_expr = expr; }
+    
+protected:
+    token::token        _token;
+    std::string         _op;
+    expression*         _expr; 
 };
 
 } // namespace ast
