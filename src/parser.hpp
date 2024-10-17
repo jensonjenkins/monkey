@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 
 namespace parser {
 
@@ -19,6 +20,17 @@ constexpr precedence SUM            = 3; // +
 constexpr precedence PRODUCT        = 4; // *
 constexpr precedence PREFIX         = 5; // -var or !var
 constexpr precedence CALL           = 6; // my_fn(var)
+
+const std::unordered_map<token::token_t, precedence> precedences {
+    {token::EQ,         EQUALS},
+    {token::NEQ,        EQUALS},
+    {token::LT,         LESSGREATER},
+    {token::GT,         LESSGREATER},
+    {token::PLUS,       SUM},
+    {token::MINUS,      SUM},
+    {token::SLASH,      PRODUCT},
+    {token::ASTERISK,   PRODUCT},
+};
 
 class parser {
 public:
@@ -38,6 +50,15 @@ public:
         register_prefix_fn(token::INT,      [this]() -> ast::expression* { return this->parse_int_literal(); });
         register_prefix_fn(token::BANG,     [this]() -> ast::expression* { return this->parse_prefix_expr(); });
         register_prefix_fn(token::MINUS,    [this]() -> ast::expression* { return this->parse_prefix_expr(); });
+
+        register_infix_fn(token::PLUS,      [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::MINUS,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::SLASH,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::ASTERISK,  [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::EQ,        [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::NEQ,       [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::LT,        [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::GT,        [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
     }
 
     /**
@@ -60,7 +81,6 @@ public:
      * NOTE: Caller is responsible for management of ast::statement* 
      */
     ast::statement* parse_statement() noexcept { 
-        // std::cout<<_cur_token.token_literal()<<" "<<token::inv_map[_cur_token.get_type()]<<std::endl;
         switch(_cur_token.get_type()){
         case token::LET:
             return parse_let_statement();
@@ -107,9 +127,7 @@ public:
 
     ast::expression_statement* parse_expr_statement() noexcept {
         ast::expression_statement* stmt = new ast::expression_statement(_cur_token);
-        
-        // std::cout<<_cur_token.token_literal()<<" "<<token::inv_map[_cur_token.get_type()]<<std::endl;
-        
+         
         stmt->move_expr(parse_expr(LOWEST));
         
         if(peek_token_is(token::SEMICOLON)) {
@@ -128,7 +146,15 @@ public:
         }
 
         ast::expression* left_expr = prefix_fn();
-        
+
+        while(!peek_token_is(token::SEMICOLON) && p < peek_precedence()) {
+            infix_parse_fn_t infix_fn = _infix_parse_fn_map[_peek_token.get_type()];
+            if(prefix_fn == nullptr) {
+                return left_expr;
+            }
+            next_token();
+            left_expr = infix_fn(left_expr);
+        }
         return left_expr;
     }
 
@@ -182,6 +208,32 @@ public:
 
     void register_infix_fn(token::token_t token_type, infix_parse_fn_t infix_parse_fn) noexcept {
         _infix_parse_fn_map[token_type] = infix_parse_fn;
+    }
+
+    const precedence peek_precedence() const noexcept {
+        auto p = precedences.find(_peek_token.get_type());
+        if(p != precedences.end()) {
+            return p->second;
+        }
+        return LOWEST;
+    }
+    
+    const precedence cur_precedence() const noexcept {
+        auto p = precedences.find(_cur_token.get_type());
+        if(p != precedences.end()) {
+            return p->second;
+        }
+        return LOWEST;
+    }
+
+    ast::expression* parse_infix_expr(ast::expression* l_expr) noexcept {
+        ast::infix_expression* expr = new ast::infix_expression(_cur_token, _cur_token.token_literal(), l_expr);
+
+        precedence cur_p = cur_precedence();
+        next_token();
+        expr->right_expr(parse_expr(cur_p));
+        
+        return expr;
     }
 
 protected:

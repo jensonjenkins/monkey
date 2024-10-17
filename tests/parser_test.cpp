@@ -210,7 +210,7 @@ void test_integer_literal(ast::expression* il, std::int64_t value) {
     }
 };
 
-void test_parsing_prefix_expression() {
+void test_parse_prefix_expression() {
     struct test_case {
         const char*     input;
         const char*     op;
@@ -223,7 +223,7 @@ void test_parsing_prefix_expression() {
         {"-15;", "-", 15}
     };
 
-    for(int i=0;i<2;i++) {
+    for(int i=0;i<prefix_test.size();i++) {
         test_case tc = prefix_test[i];
         lexer::lexer l(tc.input);
         parser p(l);
@@ -262,6 +262,68 @@ void test_parsing_prefix_expression() {
     std::cout<<"5 - ok: parse prefix with ints."<<std::endl;
 }
 
+void test_parse_infix_expression() {
+    struct test_case {
+        const char*     input;
+        const char*     op;
+        std::int64_t    left_value;
+        std::int64_t    right_value;
+        test_case(const char* input, std::int64_t lv, const char* op, std::int64_t rv) :
+            input(input), left_value(lv), op(op), right_value(rv) {};
+    };
+    std::vector<test_case> infix_test {
+        {"5 + 5;", 5, "+", 5},
+        {"5 - 5;", 5, "-", 5},
+        {"5 * 5;", 5, "*", 5},
+        {"5 / 5;", 5, "/", 5},
+        {"5 > 5;", 5, ">", 5},
+        {"5 < 5;", 5, "<", 5},
+        {"5 == 5;", 5, "==", 5},
+        {"5 != 5;", 5, "!=", 5},
+    };
+
+    for(int i=0;i<infix_test.size();i++) {
+        test_case tc = infix_test[i];
+        lexer::lexer l(tc.input);
+        parser p(l);
+        ast::program* program = p.parse_program();
+        check_parser_errors(p);
+
+        if(program->get_statements().size() != 1) {
+            std::cout<<"test_parse_prefix - statements.size() not 1, got "
+                <<program->get_statements().size()<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::statement* s = program->get_statements()[0].get();
+        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+        if(es == nullptr) {
+            std::cout<<"test_parse_prefix - statement not expression statement."<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::expression* e = es->expr();
+        ast::infix_expression* ie = dynamic_cast<ast::infix_expression*>(e);
+
+        if(ie == nullptr) {
+            std::cout<<"test_parse_prefix - expression not a infix expression."<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        test_integer_literal(ie->l_expr(), tc.left_value);
+
+        if(ie->op() != tc.op) {
+            std::cout<<"test_parse_prefix - op not "<<tc.op<<", got "<<ie->op()<<std::endl;
+            exit(EXIT_FAILURE);
+        } 
+
+        test_integer_literal(ie->r_expr(), tc.right_value);
+    }
+
+    std::cout<<"6 - ok: parse infix expr with ints."<<std::endl;
+}
+
 
 } //namespace parser
 
@@ -273,7 +335,8 @@ int main(){
     parser::test_return_statement();
     parser::test_identifier_expression();
     parser::test_integer_literal_expression();
-    parser::test_parsing_prefix_expression();
+    parser::test_parse_prefix_expression();
+    parser::test_parse_infix_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

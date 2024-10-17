@@ -60,7 +60,7 @@ protected:
 class identifier : public expression {
 public:
     identifier() noexcept = default;
-    identifier(token::token token, std::string_view value) noexcept : _token(token), _value(value) {}
+    identifier(token::token token, std::string_view value) noexcept : _token(token), _value(std::string(value)) {}
     
     identifier(const identifier& other) noexcept = delete;
     identifier& operator=(const identifier& other) noexcept = delete;
@@ -72,8 +72,8 @@ public:
     std::string_view get_value() const noexcept { return _value; }
 
 protected:
-    token::token         _token;
-    std::string          _value;
+    token::token    _token;
+    std::string     _value;
 };
 
 class let_statement : public statement {
@@ -170,7 +170,7 @@ protected:
 class prefix_expression : public expression {
 public:
     prefix_expression() noexcept = default;
-    prefix_expression(token::token token, std::string_view op) noexcept : _token(token), _op(op) {}
+    prefix_expression(token::token token, std::string_view op) noexcept : _token(token), _op(std::string(op)) {}
     
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
@@ -190,6 +190,36 @@ protected:
     token::token        _token;
     std::string         _op;
     expression*         _expr; 
+};
+
+class infix_expression : public expression {
+public: 
+    infix_expression() noexcept = default;
+    infix_expression(token::token token, std::string_view op, ast::expression* l_expr) noexcept
+        : _token(token), _op(std::string(op)), _l_expr(l_expr) {}
+
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        buf += "(";
+        buf += _l_expr->to_string();
+        buf += " " + std::string(_op) + " ";
+        buf += _r_expr->to_string();
+        buf += ")";
+        return buf;
+    }
+
+    std::string_view op() const noexcept { return _op; }
+    expression* l_expr() const noexcept { return _l_expr; }
+    expression* r_expr() const noexcept { return _r_expr; }
+    void left_expr(ast::expression* l_expr) { _l_expr = l_expr; }
+    void right_expr(ast::expression* r_expr) { _r_expr = r_expr; }
+
+protected:
+    token::token        _token; // the operator token (e.g. +, -, etc.)
+    std::string         _op;
+    ast::expression*    _l_expr;
+    ast::expression*    _r_expr;
 };
 
 } // namespace ast
