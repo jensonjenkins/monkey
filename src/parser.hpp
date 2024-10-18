@@ -39,7 +39,10 @@ public:
 
     void next_token() noexcept {
         _cur_token = _peek_token;
+        token::token _cur_token_assertion = _cur_token; // only for the assertion statement below
         _peek_token = _l.next_token();
+
+        assert(_cur_token == _cur_token_assertion && "cur_token changed when next_token() is called");
     }
 
     parser(lexer::lexer l) noexcept : _l(l) {

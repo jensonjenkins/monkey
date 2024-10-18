@@ -65,6 +65,7 @@ const std::array<std::string, token_count> inv_map {
 class token {
 public: 
     token() = default;
+    token(const token& other) noexcept : _type(other.get_type()), _literal(other.token_literal()) {}
     token(token_t t, const char* lit) noexcept : _type(t), _literal(lit) {};
     token(token_t t, std::string lit) noexcept : _type(t), _literal(lit) {};
     token(token_t t, std::string_view lit) noexcept : _type(t), _literal(std::string(lit)) {};
@@ -72,6 +73,8 @@ public:
     void set(token_t t, const char* lit) noexcept { _type = t; _literal = lit; }
     void set(token_t t, std::string lit) noexcept { _type = t; _literal = lit; }
     void set(token_t t, std::string_view lit) noexcept { _type = t; _literal = lit; }
+    
+    bool operator==(const token& other) const noexcept { return _type == other.get_type() && _literal == other.token_literal(); }
 
     const std::string_view token_literal() const noexcept { return _literal; }
     const token_t get_type() const noexcept { return _type; }
