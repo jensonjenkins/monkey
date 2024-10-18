@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <type_traits>
 
 #include "../src/parser.hpp"
 
@@ -14,6 +15,75 @@ void check_parser_errors(parser p) {
         std::cout<<"parser error: "<<error<<std::endl;
     }
     exit(EXIT_FAILURE);
+}
+
+void test_integer_literal(ast::expression* il, std::int64_t value) {
+    ast::int_literal* int_lit = dynamic_cast<ast::int_literal*>(il);
+
+    if(int_lit == nullptr) {
+        std::cout<<"fail: test_integer_literal - expression not an integer literal."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(int_lit->value() != value) {
+        std::cout<<"fail: test_integer_literal - int_lit->value() not "<<value<<", got "<<int_lit->value()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(int_lit->token_literal() != std::to_string(value)) {
+        std::cout<<"fail: test_integer_literal - int_lit token_literal not "<<std::to_string(value)
+            <<", got "<<int_lit->token_literal()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+void test_identifier(ast::expression* expr, const std::string& value) {
+    ast::identifier* ident = dynamic_cast<ast::identifier*>(expr);
+    if(ident == nullptr) {
+        std::cout<<"fail: test_identifier - expression not an identifier."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(ident->value() != value) {
+        std::cout<<"fail: test_identifier - ident->get_value() not "<<value<<", got "<<ident->value()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(ident->token_literal() != value) {
+        std::cout<<"fail: test_identifier - ident token_literal not "<<value
+            <<", got "<<ident->token_literal()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+template <typename T>
+void test_literal_expression(ast::expression* expr, T v) {
+    if constexpr(std::is_same_v<T, int> || std::is_same_v<T, std::int64_t>) {
+        return test_integer_literal(expr, v);
+    } else if constexpr (std::is_same_v<T, std::string>) {
+        return test_identifier(expr, std::string(v));
+    };
+    std::cout<<"fail: test_literal_expression - type of expression not handled."<<std::endl;
+    exit(EXIT_FAILURE);
+}
+
+template <typename L, typename R>
+void test_infix_expression(ast::expression* expr, L left, std::string op, R right) {
+    ast::infix_expression* ie = dynamic_cast<ast::infix_expression*>(expr);
+
+    if(ie == nullptr) {
+        std::cout<<"fail: test_infix_expression - expression not a infix expression."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    test_literal_expression(ie->l_expr(), left);
+
+    if(ie->op() != op) {
+        std::cout<<"fail: test_infix_expression - op not "<<op<<", got "<<ie->op()<<std::endl;
+        exit(EXIT_FAILURE);
+    } 
+
+    test_literal_expression(ie->r_expr(), right);
 }
 
 void test_let_statement() {
@@ -33,7 +103,7 @@ void test_let_statement() {
     if(program == nullptr) {
         std::cout<<"fail: test_let_statement_1 - parse_program() returned nullptr."<<std::endl;
     }
-    if(program->get_statements().size() != 3) {
+    if(program->statements().size() != 3) {
         std::cout<<"fail: test_let_statement_1 - incorrect number of program statements."<<std::endl;
     }
     
@@ -48,11 +118,11 @@ void test_let_statement() {
             std::cout<<"fail: test_let_statement_1 - token_literal() not let."<<std::endl;
             return false;
         }
-        if(ls->get_ident().token_literal() != name) {
+        if(ls->ident().token_literal() != name) {
             std::cout<<"fail: test_let_statement_1 - s identifier token_literal not equal to "<<name<<std::endl;
             return false;
         }
-        if(ls->get_ident().get_value() != name) {
+        if(ls->ident().value() != name) {
             std::cout<<"fail: test_let_statement_1 - s identifier name not equal to "<<name<<std::endl;
             return false;
         }
@@ -60,7 +130,7 @@ void test_let_statement() {
     };
     
     for(int i=0;i<3;i++){
-        ast::statement* stmt = program->get_statements()[i].get();
+        ast::statement* stmt = program->statements()[i].get();
 
         if(!test_let_statement(stmt, var_names[i])) { exit(EXIT_FAILURE); }
     }
@@ -81,14 +151,14 @@ void test_return_statement() {
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->get_statements().size() != 3) {
+    if(program->statements().size() != 3) {
         std::cout<<"fail: test_return_statement_1 - program statements not equal to 3, got "
-            <<program->get_statements().size()<<std::endl;
+            <<program->statements().size()<<std::endl;
         exit(EXIT_FAILURE);
     }
     
     for(int i=0;i<3;i++){
-        ast::statement* s = program->get_statements()[i].get();
+        ast::statement* s = program->statements()[i].get();
         ast::return_statement* rs = dynamic_cast<ast::return_statement*>(s);
         if(rs == nullptr){
             std::cout
@@ -121,13 +191,13 @@ void test_identifier_expression() {
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->get_statements().size() != 1) {
+    if(program->statements().size() != 1) {
         std::cout<<"fail: test_ident_expr_1 - statements.size() not 1, got "
-            <<program->get_statements().size()<<std::endl;
+            <<program->statements().size()<<std::endl;
         exit(EXIT_FAILURE);
     }
     
-    ast::statement* s = program->get_statements()[0].get();
+    ast::statement* s = program->statements()[0].get();
     ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
 
     if(es == nullptr) {
@@ -159,13 +229,13 @@ void test_integer_literal_expression() {
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->get_statements().size() != 1) {
+    if(program->statements().size() != 1) {
         std::cout<<"fail: test_int_literal_expr - statements.size() not 1, got "
-            <<program->get_statements().size()<<std::endl;
+            <<program->statements().size()<<std::endl;
         exit(EXIT_FAILURE);
     }
     
-    ast::statement* s = program->get_statements()[0].get();
+    ast::statement* s = program->statements()[0].get();
     ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
 
     if(es == nullptr) {
@@ -190,26 +260,6 @@ void test_integer_literal_expression() {
     std::cout<<"4 - ok: parse integer literal rvalue."<<std::endl;
 }
 
-void test_integer_literal(ast::expression* il, std::int64_t value) {
-    ast::int_literal* int_lit = dynamic_cast<ast::int_literal*>(il);
-
-    if(int_lit == nullptr) {
-        std::cout<<"fail: test_integer_literal - expression not an integer literal."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(int_lit->value() != value) {
-        std::cout<<"fail: test_integer_literal - int_lit->value() not "<<value<<", got "<<int_lit->value()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(int_lit->token_literal() != std::to_string(value)) {
-        std::cout<<"fail: test_integer_literal - int_lit token_literal not "<<std::to_string(value)
-            <<", got "<<int_lit->token_literal()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-};
-
 void test_parse_prefix_expression() {
     struct test_case {
         const char*     input;
@@ -230,13 +280,13 @@ void test_parse_prefix_expression() {
         ast::program* program = p.parse_program();
         check_parser_errors(p);
 
-        if(program->get_statements().size() != 1) {
+        if(program->statements().size() != 1) {
             std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
-                <<program->get_statements().size()<<std::endl;
+                <<program->statements().size()<<std::endl;
             exit(EXIT_FAILURE);
         }
 
-        ast::statement* s = program->get_statements()[0].get();
+        ast::statement* s = program->statements()[0].get();
         ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
 
         if(es == nullptr) {
@@ -257,7 +307,7 @@ void test_parse_prefix_expression() {
             exit(EXIT_FAILURE);
         } 
 
-        test_integer_literal(pf->expr(), tc.int_value);
+        test_literal_expression(pf->expr(), tc.int_value);
     }
     std::cout<<"5 - ok: parse prefix with ints."<<std::endl;
 }
@@ -289,13 +339,13 @@ void test_parse_infix_expression() {
         ast::program* program = p.parse_program();
         check_parser_errors(p);
 
-        if(program->get_statements().size() != 1) {
+        if(program->statements().size() != 1) {
             std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
-                <<program->get_statements().size()<<std::endl;
+                <<program->statements().size()<<std::endl;
             exit(EXIT_FAILURE);
         }
 
-        ast::statement* s = program->get_statements()[0].get();
+        ast::statement* s = program->statements()[0].get();
         ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
 
         if(es == nullptr) {
@@ -304,21 +354,7 @@ void test_parse_infix_expression() {
         }
 
         ast::expression* e = es->expr();
-        ast::infix_expression* ie = dynamic_cast<ast::infix_expression*>(e);
-
-        if(ie == nullptr) {
-            std::cout<<"fail: test_parse_prefix - expression not a infix expression."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        test_integer_literal(ie->l_expr(), tc.left_value);
-
-        if(ie->op() != tc.op) {
-            std::cout<<"fail: test_parse_prefix - op not "<<tc.op<<", got "<<ie->op()<<std::endl;
-            exit(EXIT_FAILURE);
-        } 
-
-        test_integer_literal(ie->r_expr(), tc.right_value);
+        test_infix_expression(e, tc.left_value, tc.op, tc.right_value);
     }
 
     std::cout<<"6 - ok: parse infix expr with ints."<<std::endl;

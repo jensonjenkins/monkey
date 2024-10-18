@@ -40,7 +40,7 @@ public:
         return buf;
     }
     
-    const std::vector<std::unique_ptr<ast::statement>>& get_statements() const noexcept { 
+    const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { 
         return _statements; 
     }
     void add_statement(ast::statement* stmt) noexcept { 
@@ -69,7 +69,7 @@ public:
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { return std::string(token_literal()); }
-    std::string_view get_value() const noexcept { return _value; }
+    std::string_view value() const noexcept { return _value; }
 
 protected:
     token::token    _token;
@@ -100,8 +100,8 @@ public:
         return buf; 
     }
 
-    const ast::identifier& get_ident() const noexcept { return _ident; }
-    const token::token& get_token() const noexcept { return _token; }
+    const ast::identifier& ident() const noexcept { return _ident; }
+    const token::token& token() const noexcept { return _token; }
 
 protected:
     token::token                _token;
