@@ -467,6 +467,11 @@ void test_parse_operator_precedence() {
         {"false", "false\n"},
         {"3 > 5 == false", "((3 > 5) == false)\n"},
         {"3 < 5 == true", "((3 < 5) == true)\n"},
+        {"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)\n"},
+        {"(5 + 5) * 2", "((5 + 5) * 2)\n"},
+        {"2 / (5 + 5)", "(2 / (5 + 5))\n"},
+        {"-(5 + 5)", "(-(5 + 5))\n"},
+        {"!(true == true)", "(!(true == true))\n"},
     };
 
     for(int i=0;i<infix_test.size();i++) {
@@ -527,6 +532,130 @@ void test_boolean_expression() {
     std::cout<<"8 - ok: parse boolean expr."<<std::endl;
 }
 
+void test_if_expression() {
+    const char* input = "if (x < y) { x }";
+
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+    
+    if(program->statements().size() != 1) {
+        std::cout<<"fail: test_if_expression - statements.size() not 1, got "
+            <<program->statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    ast::statement* s = program->statements()[0].get();
+    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+    if(es == nullptr) {
+        std::cout<<"fail: test_if_expression - statement not expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression* e = es->expr();
+    ast::if_expression* ie = dynamic_cast<ast::if_expression*>(e);
+
+    if(ie == nullptr) {
+        std::cout<<"fail: test_if_expression - expr not an if expression."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    test_infix_expression(ie->condition(), "x", "<", "y");
+
+    if(ie->consequence()->statements().size() != 1) {
+        std::cout<<"fail: test_if_expression - consequence statements size() not 1, got "
+            <<ie->consequence()->statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression_statement* c = 
+        dynamic_cast<ast::expression_statement*>(ie->consequence()->statements()[0].get());
+
+    if(c == nullptr) {
+        std::cout<<"fail: test_if_expression - consequence is not an expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    test_identifier(c->expr(), "x");
+
+    if(ie->alternative() != nullptr) {
+        std::cout<<"fail: test_if_expression - alternative should not exist."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::cout<<"9.1 - ok: parse if expression."<<std::endl;
+}
+
+void test_if_else_expression() {
+    const char* input = "if (x < y) { x } else { y }";
+
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+    
+    if(program->statements().size() != 1) {
+        std::cout<<"fail: test_if_expression - statements.size() not 1, got "
+            <<program->statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    ast::statement* s = program->statements()[0].get();
+    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+    if(es == nullptr) {
+        std::cout<<"fail: test_if_expression - statement not expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression* e = es->expr();
+    ast::if_expression* ie = dynamic_cast<ast::if_expression*>(e);
+
+    if(ie == nullptr) {
+        std::cout<<"fail: test_if_expression - expr not an if expression."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    test_infix_expression(ie->condition(), "x", "<", "y");
+
+    if(ie->consequence()->statements().size() != 1) {
+        std::cout<<"fail: test_if_expression - consequence statements size() not 1, got "
+            <<ie->consequence()->statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression_statement* c = 
+        dynamic_cast<ast::expression_statement*>(ie->consequence()->statements()[0].get());
+
+    if(c == nullptr) {
+        std::cout<<"fail: test_if_expression - consequence is not an expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    test_identifier(c->expr(), "x");
+
+    if(ie->alternative()->statements().size() != 1) {
+        std::cout<<"fail: test_if_expression - alternative statements size() not 1, got "
+            <<ie->alternative()->statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression_statement* a = 
+        dynamic_cast<ast::expression_statement*>(ie->alternative()->statements()[0].get());
+
+    if(a == nullptr) {
+        std::cout<<"fail: test_if_expression - consequence is not an expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    test_identifier(a->expr(), "y");
+
+
+    std::cout<<"9.2 - ok: parse if else expression."<<std::endl;
+}
+
 } //namespace parser
 
 
@@ -546,6 +675,8 @@ int main(){
     parser::test_parse_infix_expression_2();
     parser::test_parse_operator_precedence();
     parser::test_boolean_expression();
+    parser::test_if_expression();
+    parser::test_if_else_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

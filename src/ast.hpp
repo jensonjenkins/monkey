@@ -210,16 +210,16 @@ public:
     }
 
     std::string_view op() const noexcept { return _op; }
-    expression* l_expr() const noexcept { return _l_expr; }
-    expression* r_expr() const noexcept { return _r_expr; }
-    void left_expr(ast::expression* l_expr) { _l_expr = l_expr; }
-    void right_expr(ast::expression* r_expr) { _r_expr = r_expr; }
+    expression* l_expr() const noexcept { return _l_expr.get(); }
+    expression* r_expr() const noexcept { return _r_expr.get(); }
+    void left_expr(ast::expression* l_expr) { _l_expr = std::unique_ptr<ast::expression>(l_expr); }
+    void right_expr(ast::expression* r_expr) { _r_expr = std::unique_ptr<ast::expression>(r_expr); }
 
 protected:
-    token::token        _token; // the operator token (e.g. +, -, etc.)
-    std::string         _op;
-    ast::expression*    _l_expr;
-    ast::expression*    _r_expr;
+    token::token                        _token; // the operator token (e.g. +, -, etc.)
+    std::string                         _op;
+    std::unique_ptr<ast::expression>    _l_expr;
+    std::unique_ptr<ast::expression>    _r_expr;
 };
 
 class boolean : public expression {
@@ -228,12 +228,69 @@ public:
     boolean(token::token token, bool value) noexcept : _token(token), _value(value) {};
     
     const bool value() const noexcept { return _value; }
+
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { return std::string(_token.token_literal()); }
     
 protected:
     token::token    _token; 
     bool            _value;
+};
+
+class block_statement : public statement {
+public:
+    const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { return _statements; }
+
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        for(int i=0;i<_statements.size();i++){
+            ast::statement* stmt = _statements[i].get();
+            buf += stmt->to_string() + '\n';
+        }
+        return buf;
+    }
+protected:
+    token::token                    _token; // the '{' token
+    std::vector<std::unique_ptr<ast::statement>>    _statements;
+};
+
+class if_expression : public expression {
+public:
+    if_expression() noexcept = default;
+    if_expression(token::token token) noexcept : _token(token) {}
+    
+    ast::expression* condition() const noexcept { return _condition.get(); }
+    ast::block_statement* consequence() const noexcept { return _consequence.get(); }
+    ast::block_statement* alternative() const noexcept { return _alternative.get(); }
+
+    void set_consequence(ast::expression* expr) noexcept { _condition = std::unique_ptr<ast::expression>(expr); }
+    void set_condition(ast::block_statement* consequence) noexcept { 
+        _consequence = std::unique_ptr<ast::block_statement>(consequence);
+    }
+    void set_alternative(ast::block_statement* alternative) noexcept {
+        _alternative = std::unique_ptr<ast::block_statement>(alternative);
+    }
+
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        buf += "if";
+        buf += _condition->to_string();
+        buf += " ";
+        buf += _consequence->to_string();
+        if(_alternative != nullptr) {
+            buf += "else ";
+            buf += _alternative->to_string();
+        }
+        return buf;
+    }
+
+protected:
+    token::token                            _token; // the 'if' token
+    std::unique_ptr<ast::expression>        _condition;
+    std::unique_ptr<ast::block_statement>   _consequence;
+    std::unique_ptr<ast::block_statement>   _alternative;
 };
 
 } // namespace ast

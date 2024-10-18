@@ -3,7 +3,7 @@
 #include "token.hpp"
 #include "ast.hpp"
 #include "lexer.hpp"
-#include "parser_tracing.hpp"
+#include "trace.hpp"
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -56,6 +56,7 @@ public:
         register_prefix_fn(token::MINUS,    [this]() -> ast::expression* { return this->parse_prefix_expr(); });
         register_prefix_fn(token::TRUE,     [this]() -> ast::expression* { return this->parse_boolean(); });
         register_prefix_fn(token::FALSE,    [this]() -> ast::expression* { return this->parse_boolean(); });
+        register_prefix_fn(token::LPAREN,   [this]() -> ast::expression* { return this->parse_grouped_expr(); });
 
         register_infix_fn(token::PLUS,      [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::MINUS,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
@@ -112,7 +113,7 @@ public:
         if(!expect_peek(token::ASSIGN)){
             return nullptr;
         }
-
+        // TODO: skip expressions until a semicolon is found. 
         while(!cur_token_is(token::SEMICOLON)){
             next_token();
         }
@@ -194,6 +195,31 @@ public:
         expr->set_expr(parse_expr(PREFIX));
         return expr;
     }
+
+    ast::expression* parse_grouped_expr() noexcept {
+        trace t("parse_grouped_expr: " + std::string(_cur_token.token_literal()));
+        next_token();
+        ast::expression* exp = parse_expr(LOWEST);
+
+        if(!expect_peek(token::RPAREN)) {
+            return nullptr;
+        }
+        return exp;
+    }
+
+    ast::expression* parse_if_expression() {
+        trace t("parse_if_expr: " + std::string(_cur_token.token_literal()));
+        ast::expression* expr = new ast::if_expression(_cur_token);
+
+        if(!expect_peek(token::LPAREN)){
+            return nullptr;
+        }
+        next_token();
+        
+        
+
+        return expr;
+    } 
 
     bool cur_token_is(token::token_t token_type) const noexcept { return _cur_token.get_type() == token_type; }
 
