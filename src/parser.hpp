@@ -3,6 +3,7 @@
 #include "token.hpp"
 #include "ast.hpp"
 #include "lexer.hpp"
+#include "parser_tracing.hpp"
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -129,6 +130,7 @@ public:
     }
 
     ast::expression_statement* parse_expr_statement() noexcept {
+        trace t("parse_expr_statement: " + std::string(_cur_token.token_literal()));
         ast::expression_statement* stmt = new ast::expression_statement(_cur_token);
          
         stmt->move_expr(parse_expr(LOWEST));
@@ -141,6 +143,7 @@ public:
     }
 
     ast::expression* parse_expr(precedence p) noexcept {
+        trace t("parse_expr: " + std::string(_cur_token.token_literal()));
         prefix_parse_fn_t prefix_fn = _prefix_parse_fn_map[_cur_token.get_type()];
         
         if(prefix_fn == nullptr) {
@@ -167,12 +170,14 @@ public:
     }
 
     ast::expression* parse_int_literal() const {
+        trace t("parse_int_literal: " + std::string(_cur_token.token_literal()));
         std::int64_t val = std::stoll(std::string(_cur_token.token_literal()));
         ast::expression* lit = new ast::int_literal(_cur_token, val); 
         return lit;
     }
 
     ast::expression* parse_prefix_expr() noexcept {
+        trace t("parse_prefix_expr: " + std::string(_cur_token.token_literal()));
         ast::prefix_expression* expr = new ast::prefix_expression(_cur_token, _cur_token.token_literal());
         next_token();
         expr->set_expr(parse_expr(PREFIX));
@@ -230,6 +235,7 @@ public:
     }
 
     ast::expression* parse_infix_expr(ast::expression* l_expr) noexcept {
+        trace t("parse_infix_expr: " + std::string(_cur_token.token_literal()));
         ast::infix_expression* expr = new ast::infix_expression(_cur_token, _cur_token.token_literal(), l_expr);
 
         precedence cur_p = cur_precedence();
