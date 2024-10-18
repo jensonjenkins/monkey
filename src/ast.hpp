@@ -183,13 +183,13 @@ public:
     }
 
     std::string_view op() const noexcept { return _op; }
-    expression* expr() const noexcept { return _expr; }
-    void set_expr(ast::expression* expr) noexcept { this->_expr = expr; }
+    expression* expr() const noexcept { return _expr.get(); }
+    void set_expr(ast::expression* expr) noexcept { _expr = std::unique_ptr<ast::expression>(expr); }
     
 protected:
-    token::token        _token;
-    std::string         _op;
-    expression*         _expr; 
+    token::token                        _token;
+    std::string                         _op;
+    std::unique_ptr<ast::expression>    _expr; 
 };
 
 class infix_expression : public expression {
@@ -241,6 +241,10 @@ class block_statement : public statement {
 public:
     const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { return _statements; }
 
+    void add_statement(ast::statement* stmt) noexcept { 
+        _statements.push_back(std::unique_ptr<ast::statement>(stmt)); 
+    }
+
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
         std::string buf;
@@ -250,8 +254,9 @@ public:
         }
         return buf;
     }
+
 protected:
-    token::token                    _token; // the '{' token
+    token::token                                    _token; // the '{' token
     std::vector<std::unique_ptr<ast::statement>>    _statements;
 };
 
@@ -264,8 +269,8 @@ public:
     ast::block_statement* consequence() const noexcept { return _consequence.get(); }
     ast::block_statement* alternative() const noexcept { return _alternative.get(); }
 
-    void set_consequence(ast::expression* expr) noexcept { _condition = std::unique_ptr<ast::expression>(expr); }
-    void set_condition(ast::block_statement* consequence) noexcept { 
+    void set_condition(ast::expression* expr) noexcept { _condition = std::unique_ptr<ast::expression>(expr); }
+    void set_consequence(ast::block_statement* consequence) noexcept { 
         _consequence = std::unique_ptr<ast::block_statement>(consequence);
     }
     void set_alternative(ast::block_statement* alternative) noexcept {

@@ -57,6 +57,8 @@ public:
         register_prefix_fn(token::TRUE,     [this]() -> ast::expression* { return this->parse_boolean(); });
         register_prefix_fn(token::FALSE,    [this]() -> ast::expression* { return this->parse_boolean(); });
         register_prefix_fn(token::LPAREN,   [this]() -> ast::expression* { return this->parse_grouped_expr(); });
+        register_prefix_fn(token::IF,       [this]() -> ast::expression* { return this->parse_if_expression(); });
+
 
         register_infix_fn(token::PLUS,      [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::MINUS,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
@@ -209,17 +211,47 @@ public:
 
     ast::expression* parse_if_expression() {
         trace t("parse_if_expr: " + std::string(_cur_token.token_literal()));
-        ast::expression* expr = new ast::if_expression(_cur_token);
+        ast::if_expression* expr = new ast::if_expression(_cur_token);
 
         if(!expect_peek(token::LPAREN)){
             return nullptr;
         }
-        next_token();
-        
-        
+        next_token(); 
+        expr->set_condition(parse_expr(LOWEST));
+
+        if(!expect_peek(token::RPAREN)) {
+            return nullptr;
+        }
+        if(!expect_peek(token::LBRACE)) {
+            return nullptr;
+        }
+        expr->set_consequence(parse_block_statement());
+
+        if(peek_token_is(token::ELSE)) {
+            next_token();
+            if(!expect_peek(token::LBRACE)){
+                return nullptr;
+            }
+            expr->set_alternative(parse_block_statement());
+        }
 
         return expr;
     } 
+
+    ast::block_statement* parse_block_statement() {
+        trace t("parse_block_statement: " + std::string(_cur_token.token_literal()));
+        ast::block_statement* block = new ast::block_statement();
+        next_token();
+
+        while(!cur_token_is(token::RBRACE) && !cur_token_is(token::EOFT)) {
+            ast::statement* stmt = parse_statement();
+            if(stmt != nullptr) {
+                block->add_statement(stmt);
+            }
+            next_token();
+        }
+        return block;
+    }
 
     bool cur_token_is(token::token_t token_type) const noexcept { return _cur_token.get_type() == token_type; }
 
