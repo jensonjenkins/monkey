@@ -222,5 +222,19 @@ protected:
     ast::expression*    _r_expr;
 };
 
+class boolean : public expression {
+public:
+    boolean() noexcept = default;
+    boolean(token::token token, bool value) noexcept : _token(token), _value(value) {};
+    
+    const bool value() const noexcept { return _value; }
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override { return std::string(_token.token_literal()); }
+    
+protected:
+    token::token    _token; 
+    bool            _value;
+};
+
 } // namespace ast
 

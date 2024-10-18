@@ -101,29 +101,29 @@ void test_let_statement() {
     check_parser_errors(p);
 
     if(program == nullptr) {
-        std::cout<<"fail: test_let_statement_1 - parse_program() returned nullptr."<<std::endl;
+        std::cout<<"fail: test_let_statement - parse_program() returned nullptr."<<std::endl;
     }
     if(program->statements().size() != 3) {
-        std::cout<<"fail: test_let_statement_1 - incorrect number of program statements."<<std::endl;
+        std::cout<<"fail: test_let_statement - incorrect number of program statements."<<std::endl;
     }
     
     auto test_let_statement = [](ast::statement* s, const char* name) -> bool {
         ast::let_statement* ls = dynamic_cast<ast::let_statement*>(s);
 
         if(ls == nullptr) {
-            std::cout<<"fail: test_let_statement_1 - s is not an ast::let_statement."<<std::endl;
+            std::cout<<"fail: test_let_statement - s is not an ast::let_statement."<<std::endl;
             return false;
         }
         if(s->token_literal() != "let") {
-            std::cout<<"fail: test_let_statement_1 - token_literal() not let."<<std::endl;
+            std::cout<<"fail: test_let_statement - token_literal() not let."<<std::endl;
             return false;
         }
         if(ls->ident().token_literal() != name) {
-            std::cout<<"fail: test_let_statement_1 - s identifier token_literal not equal to "<<name<<std::endl;
+            std::cout<<"fail: test_let_statement - s identifier token_literal not equal to "<<name<<std::endl;
             return false;
         }
         if(ls->ident().value() != name) {
-            std::cout<<"fail: test_let_statement_1 - s identifier name not equal to "<<name<<std::endl;
+            std::cout<<"fail: test_let_statement - s identifier name not equal to "<<name<<std::endl;
             return false;
         }
         return true;
@@ -152,7 +152,7 @@ void test_return_statement() {
     check_parser_errors(p);
     
     if(program->statements().size() != 3) {
-        std::cout<<"fail: test_return_statement_1 - program statements not equal to 3, got "
+        std::cout<<"fail: test_return_statement - program statements not equal to 3, got "
             <<program->statements().size()<<std::endl;
         exit(EXIT_FAILURE);
     }
@@ -162,7 +162,7 @@ void test_return_statement() {
         ast::return_statement* rs = dynamic_cast<ast::return_statement*>(s);
         if(rs == nullptr){
             std::cout
-                <<"fail: test_return_statement_1 - statement "
+                <<"fail: test_return_statement - statement "
                 <<i<<" is not a return statement. got "
                 <<s->token_literal()
                 <<std::endl;
@@ -171,7 +171,7 @@ void test_return_statement() {
 
         if(rs->token_literal() != "return") {
             std::cout
-                <<"fail: test_return_statement_1 - statement "
+                <<"fail: test_return_statement - statement "
                 <<i<<" token_literal not 'return' . got "
                 <<s->token_literal()
                 <<std::endl;
@@ -187,12 +187,11 @@ void test_identifier_expression() {
 
     lexer::lexer l(input);
     parser p(l);
-    
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
     if(program->statements().size() != 1) {
-        std::cout<<"fail: test_ident_expr_1 - statements.size() not 1, got "
+        std::cout<<"fail: test_ident_expr - statements.size() not 1, got "
             <<program->statements().size()<<std::endl;
         exit(EXIT_FAILURE);
     }
@@ -201,23 +200,13 @@ void test_identifier_expression() {
     ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
 
     if(es == nullptr) {
-        std::cout<<"fail: test_ident_expr_1 - statement not expression statement."<<std::endl;
+        std::cout<<"fail: test_ident_expr - statement not expression statement."<<std::endl;
         exit(EXIT_FAILURE);
     }
 
     ast::expression* e = es->expr();
-    ast::identifier* ident = dynamic_cast<ast::identifier*>(e);
-    
-    if(ident == nullptr) {
-        std::cout<<"fail: test_ident_expr_1 - expression not an identifier."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    test_identifier(e, "foobar");
 
-    if(ident->token_literal() != "foobar") {
-        std::cout<<"fail: test_ident_expr_1 - token literal not foobar, got "
-            <<ident->token_literal()<<std::endl;
-        exit(EXIT_FAILURE);
-    } 
     std::cout<<"3 - ok: parse expression statement with identifier."<<std::endl;
 }
 
@@ -244,19 +233,8 @@ void test_integer_literal_expression() {
     }
 
     ast::expression* e = es->expr();
-    ast::int_literal* ident = dynamic_cast<ast::int_literal*>(e);
-    
-    if(ident == nullptr) {
-        std::cout<<"fail: test_int_literal_expr - expression not an int literal."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    test_integer_literal(e, 5);
 
-    if(ident->token_literal() != "5") {
-        std::cout<<"fail: test_int_literal_expr - token literal not foobar, got "
-            <<ident->token_literal()<<std::endl;
-        exit(EXIT_FAILURE);
-    } 
-    
     std::cout<<"4 - ok: parse integer literal rvalue."<<std::endl;
 }
 
@@ -396,6 +374,48 @@ void test_parse_operator_precedence() {
     std::cout<<"7 - ok: parse general prefix + infix exprs w precedence"<<std::endl;
 }
 
+void test_boolean_expression() {
+    const char* input = "true;";
+
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+ 
+    if(program->statements().size() != 1) {
+        std::cout<<"fail: test_bool_expr - statements.size() not 1, got "
+            <<program->statements().size()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    ast::statement* s = program->statements()[0].get();
+    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+    if(es == nullptr) {
+        std::cout<<"fail: test_bool_expr - statement not expression statement."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ast::expression* e = es->expr();
+    ast::boolean* b = dynamic_cast<ast::boolean*>(e);
+
+    if(b == nullptr) {
+        std::cout<<"fail: test_bool_expr - expr not a boolean."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    if(b->value() != true) {
+        std::cout<<"fail: test_identifier - ident->value() not "<<true<<", got "<<b->value()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    if(b->token_literal() != "true") {
+        std::cout<<"fail: test_identifier - ident token_literal not true"
+            <<", got "<<b->token_literal()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::cout<<"8 - ok: parse expression statement with identifier."<<std::endl;
+}
+
 
 } //namespace parser
 
@@ -413,6 +433,7 @@ int main(){
     parser::test_parse_prefix_expression();
     parser::test_parse_infix_expression();
     parser::test_parse_operator_precedence();
+    parser::test_boolean_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

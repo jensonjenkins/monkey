@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <string_view>
-#include <iostream>
 #include "token.hpp"
 
 namespace lexer {

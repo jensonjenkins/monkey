@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <iostream>
 #include <type_traits>
 #include <unordered_map>
 
@@ -54,6 +55,8 @@ public:
         register_prefix_fn(token::INT,      [this]() -> ast::expression* { return this->parse_int_literal(); });
         register_prefix_fn(token::BANG,     [this]() -> ast::expression* { return this->parse_prefix_expr(); });
         register_prefix_fn(token::MINUS,    [this]() -> ast::expression* { return this->parse_prefix_expr(); });
+        register_prefix_fn(token::TRUE,     [this]() -> ast::expression* { return this->parse_boolean(); });
+        register_prefix_fn(token::FALSE,    [this]() -> ast::expression* { return this->parse_boolean(); });
 
         register_infix_fn(token::PLUS,      [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::MINUS,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
@@ -98,6 +101,7 @@ public:
     }
 
     ast::let_statement* parse_let_statement() noexcept {
+        trace t("parse_let_stmt: " + std::string(_cur_token.token_literal()));
         ast::let_statement* stmt = new ast::let_statement(_cur_token);
 
         if(!expect_peek(token::IDENT)){
@@ -118,6 +122,7 @@ public:
     }
 
     ast::return_statement* parse_return_statement() noexcept {
+        trace t("parse_return_stmt: " + std::string(_cur_token.token_literal()));
         ast::return_statement* stmt = new ast::return_statement(_cur_token);
 
         next_token();
@@ -155,7 +160,7 @@ public:
 
         while(!peek_token_is(token::SEMICOLON) && p < peek_precedence()) {
             infix_parse_fn_t infix_fn = _infix_parse_fn_map[_peek_token.get_type()];
-            if(prefix_fn == nullptr) {
+            if(infix_fn == nullptr) {
                 return left_expr;
             }
             next_token();
@@ -165,8 +170,15 @@ public:
     }
 
     ast::expression* parse_identifier() const noexcept {
+        trace t("parse_ident: " + std::string(_cur_token.token_literal()));
         ast::expression* ident = new ast::identifier(_cur_token, _cur_token.token_literal());
         return ident;
+    }
+
+    ast::expression* parse_boolean() const noexcept {
+        trace t("parse_boolean: " + std::string(_cur_token.token_literal()));
+        ast::expression* boolean = new ast::boolean(_cur_token, cur_token_is(token::TRUE));
+        return boolean;
     }
 
     ast::expression* parse_int_literal() const {
