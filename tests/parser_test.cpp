@@ -7,6 +7,24 @@
 
 namespace parser {
 
+template <typename L, typename R>
+struct parse_infix_test_case {
+    L               left_value;
+    R               right_value;
+    const char*     input;
+    const char*     op;
+    parse_infix_test_case(const char* input, L lv, const char* op, R rv) :
+        input(input), left_value(lv), op(op), right_value(rv) {};
+};
+
+template <typename T>
+struct parse_prefix_test_case{
+    T               value;
+    const char*     input;
+    const char*     op;
+    parse_prefix_test_case(const char* input, const char* op, T v) : input(input), op(op), value(v) {};
+};
+
 void check_parser_errors(parser p) {
     std::vector<std::string> errors = p.errors();
     if(errors.size() == 0) { return; }
@@ -45,7 +63,7 @@ void test_identifier(ast::expression* expr, const std::string& value) {
     }
 
     if(ident->value() != value) {
-        std::cout<<"fail: test_identifier - ident->get_value() not "<<value<<", got "<<ident->value()<<std::endl;
+        std::cout<<"fail: test_identifier - ident->value() not "<<value<<", got "<<ident->value()<<std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -56,14 +74,34 @@ void test_identifier(ast::expression* expr, const std::string& value) {
     }
 }
 
+void test_boolean_literal(ast::expression* expr, bool value) {
+    ast::boolean* b = dynamic_cast<ast::boolean*>(expr);
+    if(b == nullptr) {
+        std::cout<<"fail: test_identifier - expression not an identifier."<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(b->value() != value) {
+        std::cout<<"fail: test_identifier - bool->value() not "<<value<<", got "<<b->value()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    if(b->token_literal() == "true" && !value || b->token_literal() == "false" && value) {
+        std::cout<<"fail: test_identifier - ident token_literal not "<<std::to_string(value)
+            <<", got "<<b->token_literal()<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
 template <typename T>
 void test_literal_expression(ast::expression* expr, T v) {
     if constexpr(std::is_same_v<T, int> || std::is_same_v<T, std::int64_t>) {
         return test_integer_literal(expr, v);
     } else if constexpr (std::is_same_v<T, std::string>) {
         return test_identifier(expr, std::string(v));
-    };
-    std::cout<<"fail: test_literal_expression - type of expression not handled."<<std::endl;
+    } else if constexpr (std::is_same_v<T, bool>) {
+        return test_boolean_literal(expr, v);
+    }
+    std::cout<<"fail: test_literal_expression - type of expression not handled: "<<typeid(T).name()<<std::endl;
     exit(EXIT_FAILURE);
 }
 
@@ -238,14 +276,8 @@ void test_integer_literal_expression() {
     std::cout<<"4 - ok: parse integer literal rvalue."<<std::endl;
 }
 
-void test_parse_prefix_expression() {
-    struct test_case {
-        const char*     input;
-        const char*     op;
-        std::int64_t    int_value;
-        test_case(const char* input, const char* op, std::int64_t int_value) :
-            input(input), op(op), int_value(int_value) {};
-    };
+void test_parse_prefix_expression_1() {
+    using test_case = parse_prefix_test_case<std::int64_t>;
     std::vector<test_case> prefix_test {
         {"!6;", "!", 6},
         {"-15;", "-", 15}
@@ -285,20 +317,59 @@ void test_parse_prefix_expression() {
             exit(EXIT_FAILURE);
         } 
 
-        test_literal_expression(pf->expr(), tc.int_value);
+        test_literal_expression(pf->expr(), tc.value);
     }
-    std::cout<<"5 - ok: parse prefix with ints."<<std::endl;
+    std::cout<<"5.1 - ok: parse prefix with ints."<<std::endl;
 }
 
-void test_parse_infix_expression() {
-    struct test_case {
-        const char*     input;
-        const char*     op;
-        std::int64_t    left_value;
-        std::int64_t    right_value;
-        test_case(const char* input, std::int64_t lv, const char* op, std::int64_t rv) :
-            input(input), left_value(lv), op(op), right_value(rv) {};
+void test_parse_prefix_expression_2() {
+    using test_case = parse_prefix_test_case<bool>;
+    std::vector<test_case> prefix_test {
+        {"!true;", "!", true},
+        {"!false;", "!", false}
     };
+
+    for(int i=0;i<prefix_test.size();i++) {
+        test_case tc = prefix_test[i];
+        lexer::lexer l(tc.input);
+        parser p(l);
+        ast::program* program = p.parse_program();
+        check_parser_errors(p);
+
+        if(program->statements().size() != 1) {
+            std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
+                <<program->statements().size()<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::statement* s = program->statements()[0].get();
+        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+        if(es == nullptr) {
+            std::cout<<"fail: test_parse_prefix - statement not expression statement."<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::expression* e = es->expr();
+        ast::prefix_expression* pf = dynamic_cast<ast::prefix_expression*>(e);
+
+        if(pf == nullptr) {
+            std::cout<<"fail: test_parse_prefix - expression not a prefix expression."<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        if(pf->op() != tc.op) {
+            std::cout<<"fail: test_parse_prefix - op not "<<tc.op<<", got "<<pf->op()<<std::endl;
+            exit(EXIT_FAILURE);
+        } 
+
+        test_literal_expression(pf->expr(), tc.value);
+    }
+    std::cout<<"5.2 - ok: parse prefix with bools."<<std::endl;
+}
+
+void test_parse_infix_expression_1() {
+    using test_case = parse_infix_test_case<std::int64_t, std::int64_t>;
     std::vector<test_case> infix_test {
         {"5 + 5;", 5, "+", 5},
         {"5 - 5;", 5, "-", 5},
@@ -309,7 +380,7 @@ void test_parse_infix_expression() {
         {"5 == 5;", 5, "==", 5},
         {"5 != 5;", 5, "!=", 5},
     };
-
+    
     for(int i=0;i<infix_test.size();i++) {
         test_case tc = infix_test[i];
         lexer::lexer l(tc.input);
@@ -335,7 +406,43 @@ void test_parse_infix_expression() {
         test_infix_expression(e, tc.left_value, tc.op, tc.right_value);
     }
 
-    std::cout<<"6 - ok: parse infix expr with ints."<<std::endl;
+    std::cout<<"6.1 - ok: parse infix expr with ints."<<std::endl;
+}
+
+void test_parse_infix_expression_2() {
+    using test_case = parse_infix_test_case<bool, bool>;
+    std::vector<test_case> infix_test {
+        {"true == true;", true, "==", true},
+        {"true != false;", true, "!=", false},
+        {"false == false;", false, "==", false},
+    };
+    
+    for(int i=0;i<infix_test.size();i++) {
+        test_case tc = infix_test[i];
+        lexer::lexer l(tc.input);
+        parser p(l);
+        ast::program* program = p.parse_program();
+        check_parser_errors(p);
+
+        if(program->statements().size() != 1) {
+            std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
+                <<program->statements().size()<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::statement* s = program->statements()[0].get();
+        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+
+        if(es == nullptr) {
+            std::cout<<"fail: test_parse_prefix - statement not expression statement."<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ast::expression* e = es->expr();
+        test_infix_expression(e, tc.left_value, tc.op, tc.right_value);
+    }
+
+    std::cout<<"6.2 - ok: parse infix expr with bools."<<std::endl;
 }
 
 void test_parse_operator_precedence() {
@@ -355,7 +462,11 @@ void test_parse_operator_precedence() {
         {"3 + 4; -5 * 5", "(3 + 4)\n((-5) * 5)\n"},
         {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))\n"},
         {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))\n"},
-        {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))\n"}
+        {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))\n"},
+        {"true", "true\n"},
+        {"false", "false\n"},
+        {"3 > 5 == false", "((3 > 5) == false)\n"},
+        {"3 < 5 == true", "((3 < 5) == true)\n"},
     };
 
     for(int i=0;i<infix_test.size();i++) {
@@ -413,9 +524,8 @@ void test_boolean_expression() {
         exit(EXIT_FAILURE);
     }
 
-    std::cout<<"8 - ok: parse expression statement with identifier."<<std::endl;
+    std::cout<<"8 - ok: parse boolean expr."<<std::endl;
 }
-
 
 } //namespace parser
 
@@ -430,8 +540,10 @@ int main(){
     parser::test_return_statement();
     parser::test_identifier_expression();
     parser::test_integer_literal_expression();
-    parser::test_parse_prefix_expression();
-    parser::test_parse_infix_expression();
+    parser::test_parse_prefix_expression_1();
+    parser::test_parse_prefix_expression_2();
+    parser::test_parse_infix_expression_1();
+    parser::test_parse_infix_expression_2();
     parser::test_parse_operator_precedence();
     parser::test_boolean_expression();
 
