@@ -105,42 +105,23 @@ void test_let_statement() {
     
     ast::program* program = p.parse_program();
     check_parser_errors(p);
-
+    
     if(program == nullptr) {
         std::cout<<"fail: test_let_statement - parse_program() returned nullptr."<<std::endl;
     }
-    if(program->statements().size() != 3) {
-        std::cout<<"fail: test_let_statement - incorrect number of program statements."<<std::endl;
-    }
+    assert_value(program->statements().size(), 3, "test_let_stmt - program statements");
     
-    auto test_let_statement = [](ast::statement* s, const char* name) -> bool {
-        ast::let_statement* ls = dynamic_cast<ast::let_statement*>(s);
-
-        if(ls == nullptr) {
-            std::cout<<"fail: test_let_statement - s is not an ast::let_statement."<<std::endl;
-            return false;
-        }
-        if(s->token_literal() != "let") {
-            std::cout<<"fail: test_let_statement - token_literal() not let."<<std::endl;
-            return false;
-        }
-        if(ls->ident().token_literal() != name) {
-            std::cout<<"fail: test_let_statement - s identifier token_literal not equal to "<<name<<std::endl;
-            return false;
-        }
-        if(ls->ident().value() != name) {
-            std::cout<<"fail: test_let_statement - s identifier name not equal to "<<name<<std::endl;
-            return false;
-        }
-        return true;
+    auto test_let_statement = [](ast::statement* s, const char* name) -> void {
+        ast::let_statement* ls = try_cast<ast::let_statement*>(s, "test_let_stmt - s is not a let_statement");
+        assert_value(s->token_literal(), "let", "test_let_stmt - statement token_literal");
+        assert_value(ls->ident().token_literal(), name, "test_let_stmt - stmt ident token_literal");
+        assert_value(ls->ident().value(), name, "test_let_stmt - stmt ident value");
     };
     
     for(int i=0;i<3;i++){
         ast::statement* stmt = program->statements()[i].get();
-
-        if(!test_let_statement(stmt, var_names[i])) { exit(EXIT_FAILURE); }
+        test_let_statement(stmt, var_names[i]);
     }
-
     std::cout<<"1 - ok: parse let statements with int rvalues."<<std::endl;
 }
 
@@ -150,39 +131,17 @@ void test_return_statement() {
     return 10;
     return 1923123;
     )";
-    
     lexer::lexer l(input);
     parser p(l);
-    
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->statements().size() != 3) {
-        std::cout<<"fail: test_return_statement - program statements not equal to 3, got "
-            <<program->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-    
+    assert_value(program->statements().size(), 3, "test_return_stmt - program stmt size");
+ 
     for(int i=0;i<3;i++){
         ast::statement* s = program->statements()[i].get();
-        ast::return_statement* rs = dynamic_cast<ast::return_statement*>(s);
-        if(rs == nullptr){
-            std::cout
-                <<"fail: test_return_statement - statement "
-                <<i<<" is not a return statement. got "
-                <<s->token_literal()
-                <<std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        if(rs->token_literal() != "return") {
-            std::cout
-                <<"fail: test_return_statement - statement "
-                <<i<<" token_literal not 'return' . got "
-                <<s->token_literal()
-                <<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        ast::return_statement* rs = try_cast<ast::return_statement*>(s, "test_return_stmt - stmt is not a return stmt.");
+        assert_value(rs->token_literal(), "return", "test_return_stmt - stmt token_literal");
     }
 
     std::cout<<"2 - ok: parse return statements with int rvalues."<<std::endl;
@@ -190,25 +149,15 @@ void test_return_statement() {
 
 void test_identifier_expression() {
     const char* input = "foobar;";
-
     lexer::lexer l(input);
     parser p(l);
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->statements().size() != 1) {
-        std::cout<<"fail: test_ident_expr - statements.size() not 1, got "
-            <<program->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-    
-    ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
+    assert_value(program->statements().size(), 1, "test_ident_expr - program stmt size"); 
 
-    if(es == nullptr) {
-        std::cout<<"fail: test_ident_expr - statement not expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::statement* s = program->statements()[0].get();
+    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_ident_expr - s not expr stmt");
 
     ast::expression* e = es->expr();
     test_identifier(e, "foobar");
@@ -218,25 +167,15 @@ void test_identifier_expression() {
 
 void test_integer_literal_expression() {
     const char* input = "5;";
-
     lexer::lexer l(input);
     parser p(l);
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->statements().size() != 1) {
-        std::cout<<"fail: test_int_literal_expr - statements.size() not 1, got "
-            <<program->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    assert_value(program->statements().size(), 1, "test_int_lit_expr - program stmt size"); 
     
     ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-    if(es == nullptr) {
-        std::cout<<"fail: test_int_literal_expr - statement not expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_int_lit_expr - s not expr stmt.");
 
     ast::expression* e = es->expr();
     test_integer_literal(e, 5);
@@ -258,33 +197,15 @@ void test_parse_prefix_expression_1() {
         ast::program* program = p.parse_program();
         check_parser_errors(p);
 
-        if(program->statements().size() != 1) {
-            std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
-                <<program->statements().size()<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        assert_value(program->statements().size(), 1, "test_parse_prefix_1 - program stmt size"); 
 
         ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-        if(es == nullptr) {
-            std::cout<<"fail: test_parse_prefix - statement not expression statement."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_prefix_1 - s not expr stmt.");
 
         ast::expression* e = es->expr();
-        ast::prefix_expression* pf = dynamic_cast<ast::prefix_expression*>(e);
-
-        if(pf == nullptr) {
-            std::cout<<"fail: test_parse_prefix - expression not a prefix expression."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        if(pf->op() != tc.op) {
-            std::cout<<"fail: test_parse_prefix - op not "<<tc.op<<", got "<<pf->op()<<std::endl;
-            exit(EXIT_FAILURE);
-        } 
-
+        ast::prefix_expression* pf= try_cast<ast::prefix_expression*>(e, "test_parse_prefix_1 - expr not a prefix expr.");
+        
+        assert_value(pf->op(), tc.op, "test_parse_prefix_1 - op");
         test_literal_expression(pf->expr(), tc.value);
     }
     std::cout<<"5.1 - ok: parse prefix with ints."<<std::endl;
@@ -304,33 +225,15 @@ void test_parse_prefix_expression_2() {
         ast::program* program = p.parse_program();
         check_parser_errors(p);
 
-        if(program->statements().size() != 1) {
-            std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
-                <<program->statements().size()<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        assert_value(program->statements().size(), 1, "test_parse_prefix_2 - program stmt size"); 
 
         ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-        if(es == nullptr) {
-            std::cout<<"fail: test_parse_prefix - statement not expression statement."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_prefix_2 - s not expr stmt.");
 
         ast::expression* e = es->expr();
-        ast::prefix_expression* pf = dynamic_cast<ast::prefix_expression*>(e);
-
-        if(pf == nullptr) {
-            std::cout<<"fail: test_parse_prefix - expression not a prefix expression."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        if(pf->op() != tc.op) {
-            std::cout<<"fail: test_parse_prefix - op not "<<tc.op<<", got "<<pf->op()<<std::endl;
-            exit(EXIT_FAILURE);
-        } 
-
+        ast::prefix_expression* pf= try_cast<ast::prefix_expression*>(e, "test_parse_prefix_2 - expr not a prefix expr.");
+        
+        assert_value(pf->op(), tc.op, "test_parse_prefix_2 - op");
         test_literal_expression(pf->expr(), tc.value);
     }
     std::cout<<"5.2 - ok: parse prefix with bools."<<std::endl;
@@ -356,19 +259,10 @@ void test_parse_infix_expression_1() {
         ast::program* program = p.parse_program();
         check_parser_errors(p);
 
-        if(program->statements().size() != 1) {
-            std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
-                <<program->statements().size()<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        assert_value(program->statements().size(), 1, "test_parse_infix_1 - program stmt size"); 
 
         ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-        if(es == nullptr) {
-            std::cout<<"fail: test_parse_prefix - statement not expression statement."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_infix_1 - s not expr stmt.");
 
         ast::expression* e = es->expr();
         test_infix_expression(e, tc.left_value, tc.op, tc.right_value);
@@ -392,19 +286,10 @@ void test_parse_infix_expression_2() {
         ast::program* program = p.parse_program();
         check_parser_errors(p);
 
-        if(program->statements().size() != 1) {
-            std::cout<<"fail: test_parse_prefix - statements.size() not 1, got "
-                <<program->statements().size()<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        assert_value(program->statements().size(), 1, "test_parse_infix_2 - program stmt size"); 
 
         ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-        if(es == nullptr) {
-            std::cout<<"fail: test_parse_prefix - statement not expression statement."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_infix_2 - s not expr stmt.");
 
         ast::expression* e = es->expr();
         test_infix_expression(e, tc.left_value, tc.op, tc.right_value);
@@ -450,10 +335,7 @@ void test_parse_operator_precedence() {
         check_parser_errors(p);
 
         std::string actual = program->to_string();
-        if(actual != tc.expected) {
-            std::cout<<"fail: test_parse_op_precedence - expected "<<tc.expected<<", got "<<actual<<std::endl;
-            exit(EXIT_FAILURE);
-        }
+        assert_value(actual, tc.expected, "test_parse_op_precedence - to_string");
     }
     std::cout<<"7 - ok: parse general prefix + infix exprs w precedence"<<std::endl;
 }
@@ -465,160 +347,71 @@ void test_boolean_expression() {
     ast::program* program = p.parse_program();
     check_parser_errors(p);
  
-    if(program->statements().size() != 1) {
-        std::cout<<"fail: test_bool_expr - statements.size() not 1, got "
-            <<program->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    assert_value(program->statements().size(), 1, "test_bool_expr - program stmt size"); 
     
     ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-    if(es == nullptr) {
-        std::cout<<"fail: test_bool_expr - statement not expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_bool_expr - s not expr stmt.");
 
     ast::expression* e = es->expr();
-    ast::boolean* b = dynamic_cast<ast::boolean*>(e);
-
-    if(b == nullptr) {
-        std::cout<<"fail: test_bool_expr - expr not a boolean."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-    if(b->value() != true) {
-        std::cout<<"fail: test_identifier - ident->value() not "<<true<<", got "<<b->value()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-    if(b->token_literal() != "true") {
-        std::cout<<"fail: test_identifier - ident token_literal not true"
-            <<", got "<<b->token_literal()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::boolean* b = try_cast<ast::boolean*>(e, "test_bool_expr - expr not a boolean.");
+    assert_value(b->value(), true, "test_ident - bool value");
+    assert_value(b->token_literal(), "true", "test_ident - bool token_literal");
 
     std::cout<<"8 - ok: parse boolean expr."<<std::endl;
 }
 
 void test_if_expression() {
+    std::string lv = "x", op = "<", rv = "y";
     const char* input = "if (x < y) { x }";
     lexer::lexer l(input);
     parser p(l);
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->statements().size() != 1) {
-        std::cout<<"fail: test_if_expression - statements.size() not 1, got "
-            <<program->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    assert_value(program->statements().size(), 1, "test_if_expr - program stmt size"); 
     
     ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-    if(es == nullptr) {
-        std::cout<<"fail: test_if_expression - statement not expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_if_expr - s not expr stmt.");
 
     ast::expression* e = es->expr();
-    ast::if_expression* ie = dynamic_cast<ast::if_expression*>(e);
-
-    if(ie == nullptr) {
-        std::cout<<"fail: test_if_expression - expr not an if expression."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-    std::string lv = "x";
-    std::string op = "<";
-    std::string rv = "y";
+    ast::if_expression* ie = try_cast<ast::if_expression*>(e, "test_if_expression - e not an if expr");
     test_infix_expression(ie->condition(), lv, op, rv);
 
-    if(ie->consequence()->statements().size() != 1) {
-        std::cout<<"fail: test_if_expression - consequence statements size() not 1, got "
-            <<ie->consequence()->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    ast::expression_statement* c = 
-        dynamic_cast<ast::expression_statement*>(ie->consequence()->statements()[0].get());
-
-    if(c == nullptr) {
-        std::cout<<"fail: test_if_expression - consequence is not an expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
+    assert_value(ie->consequence()->statements().size(), 1, "test_if_expr - consequence stmt size");
+    ast::expression_statement* c = try_cast<ast::expression_statement*>(
+            ie->consequence()->statements()[0].get(), "test_if_expression - consequence is not an expr stmt");
     test_identifier(c->expr(), "x");
 
-    if(ie->alternative() != nullptr) {
-        std::cout<<"fail: test_if_expression - alternative should not exist."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    assert_value(ie->alternative(), nullptr, "test_if_expr - alternative");
 
     std::cout<<"9.1 - ok: parse if expression."<<std::endl;
 }
 
 void test_if_else_expression() {
+    std::string lv = "x", op = "<", rv = "y";
     const char* input = "if (x < y) { x } else { y }";
     lexer::lexer l(input);
     parser p(l);
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
-    if(program->statements().size() != 1) {
-        std::cout<<"fail: test_if_expression - statements.size() not 1, got "
-            <<program->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    assert_value(program->statements().size(), 1, "test_if_expr - program stmt size"); 
     
     ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = dynamic_cast<ast::expression_statement*>(s);
-
-    if(es == nullptr) {
-        std::cout<<"fail: test_if_expression - statement not expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_if_expr - s not expr stmt.");
 
     ast::expression* e = es->expr();
-    ast::if_expression* ie = dynamic_cast<ast::if_expression*>(e);
-
-    if(ie == nullptr) {
-        std::cout<<"fail: test_if_expression - expr not an if expression."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-    std::string lv = "x";
-    std::string op = "<";
-    std::string rv = "y";
+    ast::if_expression* ie = try_cast<ast::if_expression*>(e, "test_if_expression - e not an if expr");
     test_infix_expression(ie->condition(), lv, op, rv);
 
-    if(ie->consequence()->statements().size() != 1) {
-        std::cout<<"fail: test_if_expression - consequence statements size() not 1, got "
-            <<ie->consequence()->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    ast::expression_statement* c = 
-        dynamic_cast<ast::expression_statement*>(ie->consequence()->statements()[0].get());
-
-    if(c == nullptr) {
-        std::cout<<"fail: test_if_expression - consequence is not an expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
+    assert_value(ie->consequence()->statements().size(), 1, "test_if_expr - consequence stmt size");
+    ast::expression_statement* c = try_cast<ast::expression_statement*>(
+            ie->consequence()->statements()[0].get(), "test_if_expression - consequence is not an expr stmt");
     test_identifier(c->expr(), "x");
-
-    if(ie->alternative()->statements().size() != 1) {
-        std::cout<<"fail: test_if_expression - alternative statements size() not 1, got "
-            <<ie->alternative()->statements().size()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    ast::expression_statement* a = 
-        dynamic_cast<ast::expression_statement*>(ie->alternative()->statements()[0].get());
-
-    if(a == nullptr) {
-        std::cout<<"fail: test_if_expression - consequence is not an expression statement."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
+    
+    assert_value(ie->alternative()->statements().size(), 1, "test_if_expr - alternative statements size");
+    ast::expression_statement* a = try_cast<ast::expression_statement*>(
+            ie->alternative()->statements()[0].get(), "test_if_expr - alternative is not an expr stmt.");
     test_identifier(a->expr(), "y");
 
 
