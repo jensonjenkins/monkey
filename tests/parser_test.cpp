@@ -561,8 +561,10 @@ void test_if_expression() {
         std::cout<<"fail: test_if_expression - expr not an if expression."<<std::endl;
         exit(EXIT_FAILURE);
     }
-    
-    test_infix_expression(ie->condition(), "x", "<", "y");
+    std::string lv = "x";
+    std::string op = "<";
+    std::string rv = "y";
+    test_infix_expression(ie->condition(), lv, op, rv);
 
     if(ie->consequence()->statements().size() != 1) {
         std::cout<<"fail: test_if_expression - consequence statements size() not 1, got "
@@ -617,8 +619,10 @@ void test_if_else_expression() {
         std::cout<<"fail: test_if_expression - expr not an if expression."<<std::endl;
         exit(EXIT_FAILURE);
     }
-    
-    test_infix_expression(ie->condition(), "x", "<", "y");
+    std::string lv = "x";
+    std::string op = "<";
+    std::string rv = "y";
+    test_infix_expression(ie->condition(), lv, op, rv);
 
     if(ie->consequence()->statements().size() != 1) {
         std::cout<<"fail: test_if_expression - consequence statements size() not 1, got "
