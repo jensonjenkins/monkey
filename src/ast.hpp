@@ -298,5 +298,31 @@ protected:
     std::unique_ptr<ast::block_statement>   _alternative;
 };
 
+class function_literal : public expression {
+public:
+    function_literal() noexcept = default;
+    
+    const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
+    const ast::block_statement* body() const noexcept { return _body.get(); }
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        buf += _token.token_literal();
+        buf += "(";
+        for(int i=0;i<_parameters.size();i++){
+            ast::identifier* ident = _parameters[i].get();
+            buf += ident->to_string() + ',';
+        }
+        buf += ")";
+        buf += _body->to_string();
+        return buf;
+    }
+
+protected:
+    token::token                                    _token;
+    std::unique_ptr<ast::block_statement>          _body;
+    std::vector<std::unique_ptr<ast::identifier>>  _parameters;
+};
+
 } // namespace ast
 

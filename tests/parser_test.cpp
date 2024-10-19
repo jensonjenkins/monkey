@@ -25,6 +25,24 @@ struct parse_prefix_test_case{
     parse_prefix_test_case(const char* input, const char* op, T v) : input(input), op(op), value(v) {};
 };
 
+template <typename To, typename From>
+To try_cast(From from, std::string err_msg) {
+    To casted = dynamic_cast<To>(from);
+    if(casted == nullptr){
+        std::cout<<"fail: "<<err_msg<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return casted;
+}
+
+template <typename T, typename V>
+void assert_value(const T& actual, const V& expected, std::string err_msg){
+    if(actual != expected) {
+        std::cout<<"fail: "<<err_msg<<" does not match. expected "<<expected<<" , got "<<actual<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
 void check_parser_errors(parser p) {
     std::vector<std::string> errors = p.errors();
     if(errors.size() == 0) { return; }
@@ -36,60 +54,21 @@ void check_parser_errors(parser p) {
 }
 
 void test_integer_literal(ast::expression* il, std::int64_t value) {
-    ast::int_literal* int_lit = dynamic_cast<ast::int_literal*>(il);
-
-    if(int_lit == nullptr) {
-        std::cout<<"fail: test_integer_literal - expression not an integer literal."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(int_lit->value() != value) {
-        std::cout<<"fail: test_integer_literal - int_lit->value() not "<<value<<", got "<<int_lit->value()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(int_lit->token_literal() != std::to_string(value)) {
-        std::cout<<"fail: test_integer_literal - int_lit token_literal not "<<std::to_string(value)
-            <<", got "<<int_lit->token_literal()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::int_literal* int_lit = try_cast<ast::int_literal*>(il, "test_int_lit - expr not an int lit.");
+    assert_value(int_lit->value(), value, "test_int_lit - int lit values");
+    assert_value(int_lit->token_literal(), std::to_string(value), "test_int_lit - int_lit token_literal");
 }
 
 void test_identifier(ast::expression* expr, const std::string& value) {
-    ast::identifier* ident = dynamic_cast<ast::identifier*>(expr);
-    if(ident == nullptr) {
-        std::cout<<"fail: test_identifier - expression not an identifier."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(ident->value() != value) {
-        std::cout<<"fail: test_identifier - ident->value() not "<<value<<", got "<<ident->value()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(ident->token_literal() != value) {
-        std::cout<<"fail: test_identifier - ident token_literal not "<<value
-            <<", got "<<ident->token_literal()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::identifier* ident = try_cast<ast::identifier*>(expr, "test_ident - expr not an ident.");
+    assert_value(ident->value(), std::string_view(value), "test_ident - ident value");
+    assert_value(ident->token_literal(), value, "test_ident - ident token_literal()");
 }
 
 void test_boolean_literal(ast::expression* expr, bool value) {
-    ast::boolean* b = dynamic_cast<ast::boolean*>(expr);
-    if(b == nullptr) {
-        std::cout<<"fail: test_identifier - expression not an identifier."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(b->value() != value) {
-        std::cout<<"fail: test_identifier - bool->value() not "<<value<<", got "<<b->value()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-    if(b->token_literal() == "true" && !value || b->token_literal() == "false" && value) {
-        std::cout<<"fail: test_identifier - ident token_literal not "<<std::to_string(value)
-            <<", got "<<b->token_literal()<<std::endl;
-        exit(EXIT_FAILURE);
-    }
+    ast::boolean* b = try_cast<ast::boolean*>(expr, "test_bool_lit - expr not a bool.");
+    assert_value(b->value(), value, "test_bool_lit - bool value");
+    assert_value(b->token_literal() == "true", value, "test_bool_lit - bool token_literal()");
 }
 
 template <typename T>
@@ -107,20 +86,9 @@ void test_literal_expression(ast::expression* expr, T v) {
 
 template <typename L, typename R>
 void test_infix_expression(ast::expression* expr, L left, std::string op, R right) {
-    ast::infix_expression* ie = dynamic_cast<ast::infix_expression*>(expr);
-
-    if(ie == nullptr) {
-        std::cout<<"fail: test_infix_expression - expression not a infix expression."<<std::endl;
-        exit(EXIT_FAILURE);
-    }
-
+    ast::infix_expression* ie = try_cast<ast::infix_expression*>(expr, "test_infix_expr - expr not an infix expr.");
     test_literal_expression(ie->l_expr(), left);
-
-    if(ie->op() != op) {
-        std::cout<<"fail: test_infix_expression - op not "<<op<<", got "<<ie->op()<<std::endl;
-        exit(EXIT_FAILURE);
-    } 
-
+    assert_value(ie->op(), op, "test_infix_expr - op");
     test_literal_expression(ie->r_expr(), right);
 }
 
@@ -492,7 +460,6 @@ void test_parse_operator_precedence() {
 
 void test_boolean_expression() {
     const char* input = "true;";
-
     lexer::lexer l(input);
     parser p(l);
     ast::program* program = p.parse_program();
@@ -534,7 +501,6 @@ void test_boolean_expression() {
 
 void test_if_expression() {
     const char* input = "if (x < y) { x }";
-
     lexer::lexer l(input);
     parser p(l);
     ast::program* program = p.parse_program();
@@ -592,7 +558,6 @@ void test_if_expression() {
 
 void test_if_else_expression() {
     const char* input = "if (x < y) { x } else { y }";
-
     lexer::lexer l(input);
     parser p(l);
     ast::program* program = p.parse_program();
@@ -660,6 +625,40 @@ void test_if_else_expression() {
     std::cout<<"9.2 - ok: parse if else expression."<<std::endl;
 }
 
+void parse_function_literal() {
+    const char* input = "fn(x, y) { x + y; }";
+    std::string lv = "x";
+    std::string op = "+";
+    std::string rv = "y";
+
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+    
+    assert_value(program->statements().size(), 1, "test_fn_lit - statements.size() dont match.");
+    
+    ast::statement* s = program->statements()[0].get();
+    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, 
+            "test_fn_lit - statement not an expr statment.");
+
+    ast::expression* e = es->expr();
+    ast::function_literal* fl = try_cast<ast::function_literal*>(e, 
+            "test_function_literal - expr not a function literal.");
+    assert_value(fl->parameters().size(), 2, "test_fn_lit - parameters.size() dont match.");
+
+    test_literal_expression(fl->parameters()[0].get(), lv);
+    test_literal_expression(fl->parameters()[1].get(), rv);
+
+    assert_value(fl->body()->statements().size(), 1, "test_fn_lit - body statements size() dont match.");
+
+    ast::expression_statement* stmt = try_cast<ast::expression_statement*>(fl->body()->statements()[0].get(), 
+            "test_function_literal - body statement not expression statement.");
+
+    test_infix_expression(stmt->expr(), lv, op, rv);
+}
+
+
 } //namespace parser
 
 
@@ -681,6 +680,7 @@ int main(){
     parser::test_boolean_expression();
     parser::test_if_expression();
     parser::test_if_else_expression();
+    parser::parse_function_literal();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 
