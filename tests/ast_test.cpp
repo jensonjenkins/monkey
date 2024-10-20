@@ -10,7 +10,7 @@ void test_to_string() {
     let_statement* ls = new let_statement(token::token(token::LET, "let"));
     ls->move_ident(identifier(token::token(token::IDENT, "my_var"), "my_var"));
     identifier* expr = new identifier(token::token(token::IDENT, "another_var"), "another_var");
-    ls->move_value(expr);
+    ls->set_value(expr);
     p.add_statement(ls);
 
     if(p.to_string() != "let my_var = another_var;\n"){

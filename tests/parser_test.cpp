@@ -25,6 +25,15 @@ struct parse_prefix_test_case{
     parse_prefix_test_case(const char* input, const char* op, T v) : input(input), op(op), value(v) {};
 };
 
+template <typename T>
+struct let_stmt_test_case {
+    T           expected_value;
+    const char* input;
+    const char* expected_ident;
+    let_stmt_test_case(const char* input, const char* ei, T ev) 
+        : input(input), expected_ident(ei), expected_value(ev) {}; 
+};
+
 template <typename To, typename From>
 To try_cast(From from, std::string err_msg) {
     To casted = dynamic_cast<To>(from);
@@ -92,37 +101,39 @@ void test_infix_expression(ast::expression* expr, L left, std::string op, R righ
     test_literal_expression(ie->r_expr(), right);
 }
 
-void test_let_statement() {
-    const char* input = R"(
-    let x = 5;
-    let y = 10;
-    let foobar = 123134;
-    )";
-    
-    const char* var_names[] = {"x", "y", "foobar"};
-    lexer::lexer l(input);
+ast::let_statement* test_let_statement_helper(ast::statement* s, const char* name) {
+    ast::let_statement* ls = try_cast<ast::let_statement*>(s, "test_let_stmt - s is not a let_statement");
+    assert_value(s->token_literal(), "let", "test_let_stmt - statement token_literal");
+    assert_value(ls->ident().token_literal(), name, "test_let_stmt - stmt ident token_literal");
+    assert_value(ls->ident().value(), name, "test_let_stmt - stmt ident value");
+    return ls;
+}
+
+template <typename T>
+void test_let_statement_template(const let_stmt_test_case<T>& tc) {
+    lexer::lexer l(tc.input);
     parser p(l);
-    
     ast::program* program = p.parse_program();
     check_parser_errors(p);
     
     if(program == nullptr) {
         std::cout<<"fail: test_let_statement - parse_program() returned nullptr."<<std::endl;
     }
-    assert_value(program->statements().size(), 3, "test_let_stmt - program statements");
+    assert_value(program->statements().size(), 1, "test_let_stmt - program statements");
+        
+    ast::statement* stmt = program->statements()[0].get();
+    ast::let_statement* ls = test_let_statement_helper(stmt, tc.expected_ident); 
+    ast::expression* val = ls->value();
+
+    test_literal_expression(val, tc.expected_value);
     
-    auto test_let_statement = [](ast::statement* s, const char* name) -> void {
-        ast::let_statement* ls = try_cast<ast::let_statement*>(s, "test_let_stmt - s is not a let_statement");
-        assert_value(s->token_literal(), "let", "test_let_stmt - statement token_literal");
-        assert_value(ls->ident().token_literal(), name, "test_let_stmt - stmt ident token_literal");
-        assert_value(ls->ident().value(), name, "test_let_stmt - stmt ident value");
-    };
-    
-    for(int i=0;i<3;i++){
-        ast::statement* stmt = program->statements()[i].get();
-        test_let_statement(stmt, var_names[i]);
-    }
     std::cout<<"1 - ok: parse let statements with int rvalues."<<std::endl;
+}
+
+void test_let_statement() {
+    test_let_statement_template<std::int64_t>({"let x = 5;", "x", 5});
+    test_let_statement_template<bool>({"let y = true;", "y", true});
+    test_let_statement_template<std::string>({"let foobar = y;", "foobar", "y"});
 }
 
 void test_return_statement() {

@@ -79,15 +79,13 @@ protected:
 class let_statement : public statement {
 public:
     let_statement(token::token token) noexcept : _token(token) {}
-
-    void move_ident(ast::identifier&& ident) { 
-        _ident = std::move(ident);
-    }
-
-    void move_value(ast::expression* expr) noexcept { _value = std::unique_ptr<expression>(expr); }
-
     let_statement(const let_statement& other) noexcept = delete;
     let_statement& operator=(const let_statement& other) noexcept = delete;
+
+    void move_ident(ast::identifier&& ident) { _ident = std::move(ident); }
+    void set_value(ast::expression* expr) noexcept { _value = std::unique_ptr<expression>(expr); }
+
+    ast::expression* value() const noexcept { return _value.get(); }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { 
@@ -112,6 +110,9 @@ protected:
 class return_statement : public statement { 
 public:
     return_statement(token::token token) noexcept : _token(token) {}
+
+    void set_return_value(ast::expression* rv) noexcept { _return_value = std::unique_ptr<ast::expression>(rv); }
+
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { 
         std::string buf;

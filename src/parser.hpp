@@ -113,15 +113,15 @@ public:
         }
 
         stmt->move_ident(ast::identifier(_cur_token, _cur_token.token_literal()));
-
         if(!expect_peek(token::ASSIGN)){
             return nullptr;
         }
-        // TODO: skip expressions until a semicolon is found. 
-        while(!cur_token_is(token::SEMICOLON)){
+        next_token();
+
+        stmt->set_value(parse_expr(LOWEST));
+        if(peek_token_is(token::SEMICOLON)) {
             next_token();
         }
-
         return stmt;
     }
 
@@ -131,7 +131,8 @@ public:
 
         next_token();
 
-        while(!cur_token_is(token::SEMICOLON)){
+        stmt->set_return_value(parse_expr(LOWEST));
+        if(peek_token_is(token::SEMICOLON)) {
             next_token();
         }
 
@@ -394,7 +395,6 @@ public:
 
         return args;
     }
-
 
 protected:
     lexer::lexer                _l;
