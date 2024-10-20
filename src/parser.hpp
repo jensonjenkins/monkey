@@ -31,6 +31,7 @@ const std::unordered_map<token::token_t, precedence> precedences {
     {token::MINUS,      SUM},
     {token::SLASH,      PRODUCT},
     {token::ASTERISK,   PRODUCT},
+    {token::LPAREN,     CALL},
 };
 
 class parser {
@@ -68,6 +69,7 @@ public:
         register_infix_fn(token::NEQ,       [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::LT,        [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::GT,        [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
+        register_infix_fn(token::LPAREN,    [this](ast::expression* a) -> ast::expression* { return this->parse_call_expr(a); });
     }
 
     /**
@@ -360,12 +362,45 @@ public:
         return expr;
     }
 
+    ast::expression* parse_call_expr(ast::expression* function) noexcept {
+        trace t("parse_call_expr: " + std::string(_cur_token.token_literal()));
+        ast::call_expression* expr = new ast::call_expression(_cur_token, function);
+        expr->set_arguments(parse_call_args());
+        return expr;
+    }
+
+    std::vector<ast::expression*> parse_call_args() noexcept {
+        trace t("parse_call_args: " + std::string(_cur_token.token_literal()));
+        std::vector<ast::expression*> args;
+
+        if(peek_token_is(token::RPAREN)){
+            next_token();
+            return args;
+        }
+
+        next_token();
+        args.push_back(parse_expr(LOWEST));
+
+        while(peek_token_is(token::COMMA)) {
+            next_token();
+            next_token();
+            args.push_back(parse_expr(LOWEST));
+        }
+
+        if(!expect_peek(token::RPAREN)) {
+            std::vector<ast::expression*> nil;
+            return nil;
+        }
+
+        return args;
+    }
+
+
 protected:
     lexer::lexer                _l;
-    std::vector<std::string>    _errors;
-
     token::token                _cur_token;
     token::token                _peek_token;
+    std::vector<std::string>    _errors;
 
     std::array<prefix_parse_fn_t, token::token_count>   _prefix_parse_fn_map;
     std::array<infix_parse_fn_t, token::token_count>    _infix_parse_fn_map;

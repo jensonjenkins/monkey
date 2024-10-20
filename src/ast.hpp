@@ -329,8 +329,43 @@ public:
 
 protected:
     token::token                                    _token;
-    std::unique_ptr<ast::block_statement>          _body;
-    std::vector<std::unique_ptr<ast::identifier>>  _parameters;
+    std::unique_ptr<ast::block_statement>           _body;
+    std::vector<std::unique_ptr<ast::identifier>>   _parameters;
+};
+
+class call_expression : public expression {
+public:
+    call_expression() noexcept = default;
+    call_expression(token::token token, ast::expression* function) noexcept : _token(token) { set_function(function); }
+
+    const std::vector<std::unique_ptr<ast::expression>>& arguments() const noexcept { return _arguments; }
+    ast::expression* function() const noexcept { return _function.get(); }
+
+    void set_arguments(std::vector<ast::expression*> stmt) noexcept {
+        for(ast::expression* s : stmt) {
+            _arguments.push_back(std::unique_ptr<ast::expression>(s));
+        }
+    }
+    void set_function(ast::expression* stmt) noexcept { _function = std::unique_ptr<ast::expression>(stmt); }
+    
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        buf += _function->token_literal();
+        buf += "(";
+        for(int i=0;i<_arguments.size();i++){
+            ast::expression* expr= _arguments[i].get();
+            buf += expr->to_string();
+            if(i != _arguments.size() - 1) {  buf += ", "; }
+        }
+        buf += ")";
+        return buf;
+    }
+    
+protected:
+    token::token                                    _token; // the '(' token
+    std::unique_ptr<ast::expression>                _function; // ident or fn literal
+    std::vector<std::unique_ptr<ast::expression>>   _arguments;
 };
 
 } // namespace ast

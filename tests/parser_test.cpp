@@ -325,6 +325,9 @@ void test_parse_operator_precedence() {
         {"2 / (5 + 5)", "(2 / (5 + 5))\n"},
         {"-(5 + 5)", "(-(5 + 5))\n"},
         {"!(true == true)", "(!(true == true))\n"},
+        {"a + add(b * c) + d", "((a + add((b * c))) + d)\n"},
+        {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))\n"},
+        {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))\n"}
     };
 
     for(int i=0;i<infix_test.size();i++) {
@@ -484,6 +487,30 @@ void test_parse_function_parameter() {
     std::cout<<"11 - ok: parse function parameters."<<std::endl;
 }
 
+void test_parse_call_expression() {
+    const char* input = "add(1, 2 * 3, 4 + 5);";
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+
+    assert_value(program->statements().size(), 1, "test_parse_call_expr - program statements size");
+
+    ast::expression_statement* e = try_cast<ast::expression_statement*>(
+            program->statements()[0].get(), "test_parse_call_expr - statement not an expr stmt.");
+    ast::call_expression* call = try_cast<ast::call_expression*>(
+            e->expr(), "test_parse_call_expr - expr stmt not an call expr.");
+
+    test_identifier(call->function(), "add");
+    assert_value(call->arguments().size(), 3, "test_parse_call_expr - number of call expr arguments");
+    
+    test_literal_expression(call->arguments()[0].get(), 1);
+    test_infix_expression(call->arguments()[1].get(), 2, "*", 3);
+    test_infix_expression(call->arguments()[2].get(), 4, "+", 5);
+
+    std::cout<<"12 - ok: parse function call expression."<<std::endl;
+}
+
 
 } //namespace parser
 
@@ -508,6 +535,7 @@ int main(){
     parser::test_if_else_expression();
     parser::test_parse_function_literal();
     parser::test_parse_function_parameter();
+    parser::test_parse_call_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 
