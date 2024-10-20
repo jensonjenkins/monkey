@@ -9,8 +9,10 @@ include_directories(src)
 set(CMAKE_BUILD_TYPE Debug)
 
 add_executable(lexer_test tests/lexer_test.cpp)
-set_target_properties(lexer_test PROPERTIES COMPILE_FLAGS "-g")
 add_executable(parser_test tests/parser_test.cpp)
-set_target_properties(parser_test PROPERTIES COMPILE_FLAGS "-g")
 add_executable(ast_test tests/ast_test.cpp)
+add_executable(repl tests/repl.cpp)
+
+set_target_properties(lexer_test PROPERTIES COMPILE_FLAGS "-g")
+set_target_properties(parser_test PROPERTIES COMPILE_FLAGS "-g")
 set_target_properties(ast_test PROPERTIES COMPILE_FLAGS "-g")
