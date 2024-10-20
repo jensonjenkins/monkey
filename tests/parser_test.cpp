@@ -418,7 +418,7 @@ void test_if_else_expression() {
     std::cout<<"9.2 - ok: parse if else expression."<<std::endl;
 }
 
-void parse_function_literal() {
+void test_parse_function_literal() {
     const char* input = "fn(x, y) { x + y; }";
     std::string lv = "x";
     std::string op = "+";
@@ -449,6 +449,39 @@ void parse_function_literal() {
             "test_function_literal - body statement not expression statement.");
 
     test_infix_expression(stmt->expr(), lv, op, rv);
+
+    std::cout<<"10 - ok: parse function literal."<<std::endl;
+}
+
+void test_parse_function_parameter() {
+    struct test_case {
+        const char* input;
+        std::vector<std::string> expected;
+        test_case(const char* i, std::vector<std::string> e) : input(i), expected(e) {}
+    };
+    std::vector<test_case> fn_param_test {
+        {"fn() {}", std::vector<std::string>{}},
+        {"fn(x) {}", std::vector<std::string>{"x"}},
+        {"fn(x, y, z) {}", std::vector<std::string>{"x", "y", "z"}},
+    };
+    for(int i=0;i<fn_param_test.size();i++) {
+        test_case tc = fn_param_test[i];
+        lexer::lexer l(tc.input);
+        parser p(l);
+        ast::program* program = p.parse_program();
+        check_parser_errors(p);
+
+        ast::expression_statement* stmt = try_cast<ast::expression_statement*>(
+                program->statements()[0].get(), "test_parse_fn_param - stmt not an expr stmt.");
+        ast::function_literal* fn = try_cast<ast::function_literal*>(
+                stmt->expr(), "test_parse_fn_param - expr stmt not a fn literal.");
+
+        assert_value(fn->parameters().size(), tc.expected.size(), "test_parse_fn_param - parameter count");
+        for(int j=0;j<tc.expected.size();j++) {
+            test_literal_expression(fn->parameters()[j].get(), tc.expected[j]);
+        }
+    }
+    std::cout<<"11 - ok: parse function parameters."<<std::endl;
 }
 
 
@@ -473,7 +506,8 @@ int main(){
     parser::test_boolean_expression();
     parser::test_if_expression();
     parser::test_if_else_expression();
-    parser::parse_function_literal();
+    parser::test_parse_function_literal();
+    parser::test_parse_function_parameter();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

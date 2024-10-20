@@ -58,7 +58,7 @@ public:
         register_prefix_fn(token::FALSE,    [this]() -> ast::expression* { return this->parse_boolean(); });
         register_prefix_fn(token::LPAREN,   [this]() -> ast::expression* { return this->parse_grouped_expr(); });
         register_prefix_fn(token::IF,       [this]() -> ast::expression* { return this->parse_if_expression(); });
-
+        register_prefix_fn(token::FUNCTION, [this]() -> ast::expression* { return this->parse_function_literal(); });
 
         register_infix_fn(token::PLUS,      [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::MINUS,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
@@ -209,7 +209,7 @@ public:
         return exp;
     }
 
-    ast::expression* parse_if_expression() {
+    ast::expression* parse_if_expression() noexcept {
         trace t("parse_if_expr: " + std::string(_cur_token.token_literal()));
         ast::if_expression* expr = new ast::if_expression(_cur_token);
 
@@ -238,7 +238,7 @@ public:
         return expr;
     } 
 
-    ast::block_statement* parse_block_statement() {
+    ast::block_statement* parse_block_statement() noexcept {
         trace t("parse_block_statement: " + std::string(_cur_token.token_literal()));
         ast::block_statement* block = new ast::block_statement();
         next_token();
@@ -251,6 +251,52 @@ public:
             next_token();
         }
         return block;
+    }
+
+    ast::expression* parse_function_literal() noexcept {
+        trace t("parse_fn_literal: " + std::string(_cur_token.token_literal()));
+        ast::function_literal* fn = new ast::function_literal();
+
+        if(!expect_peek(token::LPAREN)){
+            return nullptr;
+        }
+
+        fn->set_parameters(parse_function_parameters());
+
+        if(!expect_peek(token::LBRACE)){
+            return nullptr;
+        }
+
+        fn->set_body(parse_block_statement());
+
+        return fn;
+    }
+
+    std::vector<ast::identifier*> parse_function_parameters() noexcept {
+        trace t("parse_fn_parameters: " + std::string(_cur_token.token_literal()));
+        std::vector<ast::identifier*> identifiers;
+        if(peek_token_is(token::RPAREN)) {
+            next_token();
+            return identifiers;
+        }
+        next_token();
+
+        ast::identifier* ident = new ast::identifier(_cur_token, _cur_token.token_literal());
+        identifiers.push_back(ident);
+
+        while(peek_token_is(token::COMMA)) {
+            next_token();
+            next_token();
+            ast::identifier* ident = new ast::identifier(_cur_token, _cur_token.token_literal());
+            identifiers.push_back(ident);
+        }
+
+        if(!expect_peek(token::RPAREN)) {
+            std::vector<ast::identifier*> nil;
+            return nil;
+        }
+
+        return identifiers;
     }
 
     bool cur_token_is(token::token_t token_type) const noexcept { return _cur_token.get_type() == token_type; }

@@ -301,9 +301,18 @@ protected:
 class function_literal : public expression {
 public:
     function_literal() noexcept = default;
+    function_literal(token::token token) noexcept : _token(token) {};
     
     const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
     const ast::block_statement* body() const noexcept { return _body.get(); }
+
+    void set_parameters(std::vector<ast::identifier*> stmt) noexcept {
+        for(ast::identifier* s : stmt) {
+            _parameters.push_back(std::unique_ptr<ast::identifier>(s));
+        }
+    }
+    void set_body(ast::block_statement* stmt) noexcept { _body = std::unique_ptr<ast::block_statement>(stmt); }
+
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
         std::string buf;
