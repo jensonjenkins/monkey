@@ -32,8 +32,13 @@ const object::object* test_eval(const char* input) {
 }
 
 void test_integer_object(const object::object* obj, std::int64_t exp){
-    const object::integer *res = try_cast<const object::integer*>(obj, "test_int_obj - obj not an integer.");
+    const object::integer* res = try_cast<const object::integer*>(obj, "test_int_obj - obj not an integer.");
     assert_value(res->value(), exp, "test_int_obj - res->value()");  
+}
+
+void test_bool_object(const object::object* obj, bool exp){
+    const object::boolean* res = try_cast<const object::boolean*>(obj, "test_bool_obj - obj not a boolean.");
+    assert_value(res->value(), exp, "test_bool_obj - res->value()");  
 }
 
 void test_eval_integer_expression() {
@@ -50,9 +55,46 @@ void test_eval_integer_expression() {
         const object::object* evaluated = test_eval(tc[i].input);
         test_integer_object(evaluated, tc[i].expected);
     }
-    std::cout<<"1 - ok: evaluate int literal"<<std::endl;
+    std::cout<<"1 - ok: evaluate int literal."<<std::endl;
 }
 
+void test_bool_integer_expression() {
+    struct test_case {
+        const char* input;
+        bool        expected;
+        test_case(const char* i, bool e) : input(i), expected(e) {}
+    };
+    std::vector<test_case> tc {
+        {"true", true},
+        {"false", false}
+    };
+    for(int i=0;i<tc.size();i++){
+        const object::object* evaluated = test_eval(tc[i].input);
+        test_bool_object(evaluated, tc[i].expected);
+    }
+    std::cout<<"2 - ok: evaluate bool literal."<<std::endl;
+}
+
+void test_bang_operator() {
+    struct test_case {
+        const char* input;
+        bool        expected;
+        test_case(const char* i, bool e) : input(i), expected(e) {}
+    };
+    std::vector<test_case> tc {
+        {"!true", false},
+        {"!false", true},
+        {"!5", false},
+        {"!!true", true},
+        {"!!false", false},
+        {"!!5", true},
+    };
+    for(int i=0;i<tc.size();i++){
+        const object::object* evaluated = test_eval(tc[i].input);
+        test_bool_object(evaluated, tc[i].expected);
+    }
+    std::cout<<"3 - ok: evaluate bang prefix operator."<<std::endl;
+}
 
 } // namespace evaluator
 
@@ -63,6 +105,10 @@ int main() {
     std::cout<<"Running evaluator_test.cpp..."<<std::endl;
 
     evaluator::test_eval_integer_expression();
+    evaluator::test_bool_integer_expression();
+    evaluator::test_bang_operator();
 
     exit(EXIT_SUCCESS);
 }
+
+

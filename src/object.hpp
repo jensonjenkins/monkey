@@ -30,6 +30,11 @@ protected:
 
 class boolean : public object {
 public:
+    boolean() noexcept = default;
+    boolean(bool value) noexcept : _value(value) {};
+
+    bool value() const noexcept { return _value; } 
+
     const std::string inspect() const noexcept { return std::to_string(_value); }
     const object_t& type() const noexcept { return BOOLEAN_OBJ; }
 protected:
@@ -38,6 +43,8 @@ protected:
 
 class null : public object {
 public:
+    null() noexcept = default;
+
     const std::string inspect() const noexcept { return "null"; }
     const object_t& type() const noexcept { return NULL_OBJ; }
 };

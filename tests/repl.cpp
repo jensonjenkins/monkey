@@ -1,4 +1,6 @@
 #include "../src/lexer.hpp"
+#include "../src/object.hpp"
+#include "../src/evaluator.hpp"
 #include "../src/parser.hpp"
 #include <iostream>
 #include <cstdlib>
@@ -14,12 +16,12 @@ bool check_parser_errors(parser::parser p) {
     return false;
 }
 
-bool parser::trace::_enable_trace = 0;
-size_t parser::trace::_indent_level = 0;
+bool    parser::trace::_enable_trace = 0;
+size_t  parser::trace::_indent_level = 0;
 
 int main() {
     std::cout<<"Monkey v0.0.1 (main, REPL)"<<std::endl;
-    while(1) {
+    for(;;) {
         std::cout<<">>> ";
 
         std::string input_str;
@@ -33,7 +35,10 @@ int main() {
             continue;
         }
 
-        std::cout<<program->to_string()<<std::endl;
+        object::object* evaluated = evaluator::eval(program);
+        if(evaluated != nullptr){
+            std::cout<<evaluated->inspect()<<std::endl;
+        }
     }
     exit(EXIT_SUCCESS);
 }
