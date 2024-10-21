@@ -11,12 +11,17 @@ constexpr object_t BOOLEAN_OBJ  = "BOOLEAN";
 constexpr object_t NULL_OBJ     = "NULL";
 
 struct object {
-    virtual object_t type() = 0;
-    virtual std::string inspect() = 0;
+    const virtual std::string inspect() const noexcept = 0;
+    const virtual object_t& type() const noexcept = 0;
 };
 
 class integer : public object {
 public:
+    integer() noexcept = default;
+    integer(std::int64_t value) noexcept : _value(value) {};
+
+    std::int64_t value() const noexcept { return _value; } 
+
     const std::string inspect() const noexcept { return std::to_string(_value); }
     const object_t& type() const noexcept { return INTEGER_OBJ; }
 protected:
