@@ -71,6 +71,7 @@ protected:
 
 class error : public object {
 public:
+    error() noexcept = default;
     error(std::string&& msg) noexcept : _message(std::move(msg)) {}
 
     const std::string& inspect() const noexcept { return _message; }

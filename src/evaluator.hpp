@@ -12,6 +12,13 @@ inline object::boolean* FALSE_O = new object::boolean(false);
 
 static object::object* eval(ast::node* node); // forward declaration to avoid compiler complaints
 
+inline static bool is_error(object::object* obj) noexcept {
+    if (obj != nullptr) {
+        return obj->type() == object::ERROR_OBJ;
+    }
+    return false;
+}
+
 static object::object* eval_program (const std::vector<std::unique_ptr<ast::statement>>& stmts) {
     parser::trace t("eval_statements: " + std::to_string(stmts.size()) + " stmts.");
     object::object* result;
@@ -21,6 +28,9 @@ static object::object* eval_program (const std::vector<std::unique_ptr<ast::stat
 
         if(auto* rv = dynamic_cast<object::return_value*>(result)) {
             return rv->value();
+        }
+        if(auto* e = dynamic_cast<object::error*>(result)) {
+            return e;
         }
     }
 
@@ -42,7 +52,7 @@ static object::object* eval_bang_operator_expression(object::object* right) noex
 
 static object::object* eval_minus_prefix_operator_expression(object::object* right) noexcept {
     if(right->type() != object::INTEGER_OBJ) {
-        return NULL_O;
+        return new object::error("unknown operator: -" + std::string(right->type()));
     }
     object::integer* r = dynamic_cast<object::integer*>(right);
     return new object::integer(-(r->value()));
@@ -50,12 +60,12 @@ static object::object* eval_minus_prefix_operator_expression(object::object* rig
 
 static object::object* eval_prefix_expression(std::string_view op, object::object* right) {
     parser::trace t("eval_prefix_expression_method: " + std::string(op) + " " + right->inspect());
-    if(op == "!") {
+    if (op == "!") {
         return eval_bang_operator_expression(right);
-    } else if(op == "-") {
+    } else if (op == "-") {
         return eval_minus_prefix_operator_expression(right);
     } else {
-        return NULL_O;
+        return new object::error("unknown operator: "  + std::string(op) + right->type());
     }
 }
 
@@ -66,7 +76,7 @@ static object::object* eval_bool_infix_expression(object::boolean* left, std::st
     } else if(op == "==") {
         return (left->value() == right->value()) ? TRUE_O : FALSE_O;
     } else {
-        return NULL_O;
+        return new object::error("unknown operator: " + std::string(left->type()) + " " + std::string(op) + " " + right->type());
     }
 }
 
@@ -89,7 +99,7 @@ static object::object* eval_integer_infix_expression(object::integer* left, std:
     } else if(op == "==") {
         return (left->value() == right->value()) ? TRUE_O : FALSE_O;
     } else {
-        return NULL_O;
+        return new object::error("unknown operator: " + std::string(left->type()) + " " + std::string(op) + " " + right->type());
     }
 }
 
@@ -103,8 +113,10 @@ static object::object* eval_infix_expression(object::object* left, std::string_v
         auto* l = dynamic_cast<object::boolean*>(left);
         auto* r = dynamic_cast<object::boolean*>(right);
         return eval_bool_infix_expression(l, op, r);
+    } else if (left->type() != right->type()) {
+        return new object::error("type mismatch: " + std::string(left->type()) + " " + std::string(op) + " " + right->type());
     } else {
-        return NULL_O;
+        return new object::error("unknown operator: " + std::string(left->type()) + " " + std::string(op) + " " + right->type());
     }
 }
 
@@ -119,6 +131,9 @@ static bool is_truthy(object::object* o) noexcept {
 
 static object::object* eval_if_expression(ast::if_expression* ie) noexcept {
     object::object* condition = eval(ie->condition());
+    if (is_error(condition)) {
+        return condition;
+    }
     if (is_truthy(condition)) {
         return eval(ie->consequence());
     } else if (ie->alternative() != nullptr) {
@@ -134,10 +149,14 @@ static object::object* eval_block_statement(ast::block_statement* block) noexcep
     for(const auto& stmt : stmts){
         result = eval(stmt.get());
 
-        if(result != nullptr && result->type() == object::RETURN_VALUE_OBJ) {
-            return result;
+        if (result != nullptr) {
+            object::object_t rt = result->type();
+            if (rt == object::RETURN_VALUE_OBJ || rt == object::ERROR_OBJ) {
+                return result;
+            }
         }
     }
+
     return result;
 }
 
@@ -158,12 +177,21 @@ static object::object* eval(ast::node* node) {
     if (auto* n = dynamic_cast<ast::prefix_expression*>(node)) {
         parser::trace t("eval_prefix_expr");
         object::object* right = eval(n->expr());
+        if (is_error(right)) {
+            return right;
+        }
         return eval_prefix_expression(n->op(), right);
     }
     if (auto* n = dynamic_cast<ast::infix_expression*>(node)) {
         parser::trace t("eval_infix_expr");
         object::object* left = eval(n->l_expr());
+        if (is_error(left)) {
+            return left;
+        }
         object::object* right = eval(n->r_expr());
+        if (is_error(right)) {
+            return right;
+        }
         return eval_infix_expression(left, n->op(), right);
     }
     if (auto* n = dynamic_cast<ast::block_statement*>(node)) {
@@ -173,6 +201,9 @@ static object::object* eval(ast::node* node) {
     if (auto* n = dynamic_cast<ast::return_statement*>(node)) {
         parser::trace t("eval_return_stmt");
         object::object* val = eval(n->return_value());
+        if (is_error(val)) {
+            return val;
+        }
         return new object::return_value(std::unique_ptr<object::object>(val));
     }
     if (auto* n = dynamic_cast<ast::if_expression*>(node)) {

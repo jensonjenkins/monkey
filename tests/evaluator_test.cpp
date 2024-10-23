@@ -178,9 +178,9 @@ void test_error_handling() {
         {"5 + true;",                       "type mismatch: INTEGER + BOOLEAN"},
         {"5 + true; 5;",                    "type mismatch: INTEGER + BOOLEAN"},
         {"-true",                           "unknown operator: -BOOLEAN"},
-        {"true + true;",                    "type mismatch: BOOLEAN + BOOLEAN"},
-        {"5; true + true; 5",               "type mismatch: BOOLEAN + BOOLEAN"},
-        {"if (10 > 1) { true + true; }",    "type mismatch: BOOLEAN + BOOLEAN"},
+        {"true + true;",                    "unknown operator: BOOLEAN + BOOLEAN"},
+        {"5; true + true; 5",               "unknown operator: BOOLEAN + BOOLEAN"},
+        {"if (10 > 1) { true + true; }",    "unknown operator: BOOLEAN + BOOLEAN"},
         {R"(
             if(10 > 1) {
                 if(20 > 2){
@@ -188,7 +188,7 @@ void test_error_handling() {
                 }
                 return 1;
             }
-        )",                                 "type mismatch: BOOLEAN + BOOLEAN"},
+        )",                                 "unknown operator: BOOLEAN + BOOLEAN"},
     };
     for(int i=0;i<tc.size();i++){
         object::object* evaluated = const_cast<object::object*>(test_eval(tc[i].input));
