@@ -172,6 +172,32 @@ void test_return_statements() {
     std::cout<<"5 - ok: return statements."<<std::endl;
 }
 
+void test_error_handling() {
+    using test_case = test_case_base<std::string>;
+    std::vector<test_case> tc {
+        {"5 + true;",                       "type mismatch: INTEGER + BOOLEAN"},
+        {"5 + true; 5;",                    "type mismatch: INTEGER + BOOLEAN"},
+        {"-true",                           "unknown operator: -BOOLEAN"},
+        {"true + true;",                    "type mismatch: BOOLEAN + BOOLEAN"},
+        {"5; true + true; 5",               "type mismatch: BOOLEAN + BOOLEAN"},
+        {"if (10 > 1) { true + true; }",    "type mismatch: BOOLEAN + BOOLEAN"},
+        {R"(
+            if(10 > 1) {
+                if(20 > 2){
+                    return true + false;
+                }
+                return 1;
+            }
+        )",                                 "type mismatch: BOOLEAN + BOOLEAN"},
+    };
+    for(int i=0;i<tc.size();i++){
+        object::object* evaluated = const_cast<object::object*>(test_eval(tc[i].input));
+        object::error* eo = try_cast<object::error*>(evaluated, "test_error_handling - not an error obj.");
+        assert_value(eo->inspect(), tc[i].expected, "test_error_handling - error message");
+    }
+    std::cout<<"6 - ok: evaluate error handling."<<std::endl;
+}
+
 } // namespace evaluator
 
 size_t parser::trace::_indent_level = 0;
@@ -185,6 +211,7 @@ int main() {
     evaluator::test_eval_bang_operator();
     evaluator::test_if_else_expression();
     evaluator::test_return_statements();
+    evaluator::test_error_handling();
 
     exit(EXIT_SUCCESS);
 }
