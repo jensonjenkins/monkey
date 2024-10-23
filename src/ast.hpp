@@ -111,6 +111,8 @@ class return_statement : public statement {
 public:
     return_statement(token::token token) noexcept : _token(token) {}
 
+    ast::expression* return_value() const noexcept { return _return_value.get(); }
+
     void set_return_value(ast::expression* rv) noexcept { _return_value = std::unique_ptr<ast::expression>(rv); }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }

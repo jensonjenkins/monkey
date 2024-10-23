@@ -6,13 +6,15 @@ namespace object {
 
 using object_t = const char*;
 
-constexpr object_t INTEGER_OBJ  = "INTEGER";
-constexpr object_t BOOLEAN_OBJ  = "BOOLEAN";
-constexpr object_t NULL_OBJ     = "NULL";
+constexpr object_t INTEGER_OBJ      = "INTEGER";
+constexpr object_t BOOLEAN_OBJ      = "BOOLEAN";
+constexpr object_t NULL_OBJ         = "NULL";
+constexpr object_t RETURN_VALUE_OBJ = "RETURN_VALUE";
 
 struct object {
     const virtual std::string inspect() const noexcept = 0;
     const virtual object_t& type() const noexcept = 0;
+    virtual ~object() noexcept = default; 
 };
 
 class integer : public object {
@@ -49,4 +51,18 @@ public:
     const object_t& type() const noexcept { return NULL_OBJ; }
 };
 
+class return_value : public object {
+public:
+    return_value(std::unique_ptr<object> value) noexcept : _value(std::move(value)) {}
+    
+    object* value() const noexcept { return _value.get(); }
+
+    const std::string inspect() const noexcept { return _value->inspect(); }
+    const object_t& type() const noexcept { return RETURN_VALUE_OBJ; }
+protected:
+    std::unique_ptr<object> _value;
+};
+
 } // namespace object
+
+

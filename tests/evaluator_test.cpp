@@ -149,6 +149,29 @@ void test_if_else_expression() {
     std::cout<<"4 - ok: evaluate if else expr."<<std::endl;
 }
 
+void test_return_statements() {
+    using test_case = test_case_base<std::int64_t>;
+    std::vector<test_case> tc {
+        {"return 10;", 10},
+        {"return 10; 9;", 10},
+        {"return 2 * 55; 9;", 110},
+        {"9; return 3 * 5; 9;", 15},
+        {R"(
+            if(10 > 1) {
+                if(20 > 2){
+                    return 20;
+                }
+                return 1;
+            }
+        )", 20}
+    };
+    for(int i=0;i<tc.size();i++){
+        const object::object* evaluated = test_eval(tc[i].input);
+        test_integer_object(evaluated, tc[i].expected);
+    }
+    std::cout<<"5 - ok: return statements."<<std::endl;
+}
+
 } // namespace evaluator
 
 size_t parser::trace::_indent_level = 0;
@@ -161,6 +184,7 @@ int main() {
     evaluator::test_eval_bool_expression();
     evaluator::test_eval_bang_operator();
     evaluator::test_if_else_expression();
+    evaluator::test_return_statements();
 
     exit(EXIT_SUCCESS);
 }
