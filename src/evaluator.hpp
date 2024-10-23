@@ -76,19 +76,19 @@ static object::object* eval_integer_infix_expression(object::integer* left, std:
     } else if(op == "*") {
         return new object::integer(left->value() * right->value());
     } else if(op == "<") {
-        return new object::boolean(left->value() < right->value());
+        return (left->value() < right->value()) ? TRUE_O : FALSE_O;
     } else if(op == ">") {
-        return new object::boolean(left->value() > right->value());
+        return (left->value() > right->value()) ? TRUE_O : FALSE_O;
     } else if(op == "!=") {
-        return new object::boolean(left->value() != right->value());
+        return (left->value() != right->value()) ? TRUE_O : FALSE_O;
     } else if(op == "==") {
-        return new object::boolean(left->value() == right->value());
+        return (left->value() == right->value()) ? TRUE_O : FALSE_O;
     } else {
         return NULL_O;
     }
 }
 
-static object::object* eval_infix_expression(object::object* left, std::string_view op, object::object* right) {
+static object::object* eval_infix_expression(object::object* left, std::string_view op, object::object* right) noexcept {
     parser::trace t("eval_infix_expr_method: " + left->inspect() + " " + std::string(op) + " " + right->inspect());
     if(left->type() == object::INTEGER_OBJ && right->type() == object::INTEGER_OBJ) {
         auto* l = dynamic_cast<object::integer*>(left);
@@ -102,6 +102,27 @@ static object::object* eval_infix_expression(object::object* left, std::string_v
         return NULL_O;
     }
 }
+
+static bool is_truthy(object::object* o) noexcept {
+    object::object* obj = dynamic_cast<object::boolean*>(o);
+    if (obj == NULL_O || obj == FALSE_O) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+static object::object* eval_if_expression(ast::if_expression* ie) noexcept {
+    object::object* condition = eval(ie->condition());
+    if (is_truthy(condition)) {
+        return eval(ie->consequence());
+    } else if (ie->alternative() != nullptr) {
+        return eval(ie->alternative());
+    } else {
+        return NULL_O;
+    }
+}
+
 
 static object::object* eval(ast::node* node) {
     parser::trace t("eval");
@@ -127,6 +148,14 @@ static object::object* eval(ast::node* node) {
         object::object* left = eval(n->l_expr());
         object::object* right = eval(n->r_expr());
         return eval_infix_expression(left, n->op(), right);
+    }
+    if (auto* n = dynamic_cast<ast::block_statement*>(node)) {
+        parser::trace t("eval_block_statement");
+        return eval_statements(n->statements());
+    }
+    if (auto* n = dynamic_cast<ast::if_expression*>(node)) {
+        parser::trace t("eval_if_expression");
+        return eval_if_expression(n);
     }
     if (auto* n = dynamic_cast<ast::int_literal*>(node)) {
         parser::trace t("eval_int_literal: " + std::to_string(n->value()));

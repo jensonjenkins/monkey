@@ -5,6 +5,13 @@
 
 namespace evaluator {
 
+template <typename T>
+struct test_case_base {
+    T           expected;
+    const char* input;
+    test_case_base(const char* i, T e) : input(i), expected(e) {}
+};
+
 template <typename To, typename From>
 To try_cast(From from, std::string err_msg) {
     To casted = dynamic_cast<To>(from);
@@ -31,22 +38,22 @@ const object::object* test_eval(const char* input) {
     return evaluator::eval(program);
 }
 
-void test_integer_object(const object::object* obj, std::int64_t exp){
+void test_integer_object(const object::object* obj, std::int64_t exp) {
     const object::integer* res = try_cast<const object::integer*>(obj, "test_int_obj - obj not an integer.");
     assert_value(res->value(), exp, "test_int_obj - res->value()");  
 }
 
-void test_bool_object(const object::object* obj, bool exp){
+void test_bool_object(const object::object* obj, bool exp) {
     const object::boolean* res = try_cast<const object::boolean*>(obj, "test_bool_obj - obj not a boolean.");
     assert_value(res->value(), exp, "test_bool_obj - res->value()");  
 }
 
+void test_null_object(const object::object* obj) {
+    const object::null* res = try_cast<const object::null*>(obj, "test_null_obj - obj not null.");
+}
+
 void test_eval_integer_expression() {
-    struct test_case {
-        const char*     input;
-        std::int64_t    expected;
-        test_case(const char* i, std::int64_t e) : input(i), expected(e) {}
-    };
+    using test_case = test_case_base<std::int64_t>;
     std::vector<test_case> tc {
         {"5", 5},
         {"10", 10},
@@ -73,11 +80,7 @@ void test_eval_integer_expression() {
 }
 
 void test_eval_bool_expression() {
-    struct test_case {
-        const char* input;
-        bool        expected;
-        test_case(const char* i, bool e) : input(i), expected(e) {}
-    };
+    using test_case = test_case_base<bool>;
     std::vector<test_case> tc {
         {"true", true},
         {"false", false},
@@ -108,11 +111,7 @@ void test_eval_bool_expression() {
 }
 
 void test_eval_bang_operator() {
-    struct test_case {
-        const char* input;
-        bool        expected;
-        test_case(const char* i, bool e) : input(i), expected(e) {}
-    };
+    using test_case = test_case_base<bool>;
     std::vector<test_case> tc {
         {"!true", false},
         {"!false", true},
@@ -128,6 +127,28 @@ void test_eval_bang_operator() {
     std::cout<<"3 - ok: evaluate bang prefix operator."<<std::endl;
 }
 
+void test_if_else_expression() {
+    using test_case = test_case_base<std::optional<std::int64_t>>;
+    std::vector<test_case> tc {
+        {"if (true) { 10 }", 10},
+        {"if (false) { 10 }", std::nullopt},
+        {"if (1) { 10 }", 10},
+        {"if (1 < 2) { 10 }", 10},
+        {"if (1 > 2) { 10 }", std::nullopt},
+        {"if (1 < 2) { 10 } else { 20 }", 10},
+        {"if (1 > 2) { 10 } else { 20 }", 20},
+    };
+    for(int i=0;i<tc.size();i++){
+        const object::object* evaluated = test_eval(tc[i].input);
+        if(tc[i].expected){
+            test_integer_object(evaluated, tc[i].expected.value());
+        } else {
+            test_null_object(evaluated);
+        }
+    }
+    std::cout<<"4 - ok: evaluate if else expr."<<std::endl;
+}
+
 } // namespace evaluator
 
 size_t parser::trace::_indent_level = 0;
@@ -139,6 +160,7 @@ int main() {
     evaluator::test_eval_integer_expression();
     evaluator::test_eval_bool_expression();
     evaluator::test_eval_bang_operator();
+    evaluator::test_if_else_expression();
 
     exit(EXIT_SUCCESS);
 }
