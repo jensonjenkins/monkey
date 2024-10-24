@@ -1,5 +1,6 @@
 #include "../src/lexer.hpp"
 #include "../src/object.hpp"
+#include "../src/scope.hpp"
 #include "../src/evaluator.hpp"
 #include "../src/parser.hpp"
 #include <iostream>
@@ -21,6 +22,7 @@ size_t  parser::trace::_indent_level = 0;
 
 int main() {
     std::cout<<"Monkey v0.0.1 (main, REPL)"<<std::endl;
+    object::scope* scope = new object::scope();
     for(;;) {
         std::cout<<">>> ";
 
@@ -35,10 +37,11 @@ int main() {
             continue;
         }
 
-        object::object* evaluated = evaluator::eval(program);
+        object::object* evaluated = evaluator::eval(program, scope);
         if(evaluated != nullptr){
             std::cout<<evaluated->inspect()<<std::endl;
         }
     }
+    delete scope;
     exit(EXIT_SUCCESS);
 }

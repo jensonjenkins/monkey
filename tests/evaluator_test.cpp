@@ -34,8 +34,9 @@ const object::object* test_eval(const char* input) {
     lexer::lexer l(input);
     parser::parser p(l);
     ast::program* program = p.parse_program();
+    object::scope* scope = new object::scope();
 
-    return evaluator::eval(program);
+    return evaluator::eval(program, scope);
 }
 
 void test_integer_object(const object::object* obj, std::int64_t exp) {
@@ -189,6 +190,7 @@ void test_error_handling() {
                 return 1;
             }
         )",                                 "unknown operator: BOOLEAN + BOOLEAN"},
+        {"foobar",                          "identifier not found: foobar"},
     };
     for(int i=0;i<tc.size();i++){
         object::object* evaluated = const_cast<object::object*>(test_eval(tc[i].input));
@@ -196,6 +198,20 @@ void test_error_handling() {
         assert_value(eo->inspect(), tc[i].expected, "test_error_handling - error message");
     }
     std::cout<<"6 - ok: evaluate error handling."<<std::endl;
+}
+
+void test_eval_let_statement() {
+    using test_case = test_case_base<std::int64_t>;
+    std::vector<test_case> tc {
+        {"let a = 5; a;", 5},
+        {"let a = 10 * 5; a;", 50},
+        {"let a = 5; let b = a; b;", 5},
+        {"let a = 5; let b = a; let c = a + b + 5; c;", 15}
+    };
+    for(int i=0;i<tc.size();i++){
+        test_integer_object(test_eval(tc[i].input), tc[i].expected);
+    }
+    std::cout<<"7 - ok: evaluate let statements."<<std::endl;
 }
 
 } // namespace evaluator
@@ -212,6 +228,7 @@ int main() {
     evaluator::test_if_else_expression();
     evaluator::test_return_statements();
     evaluator::test_error_handling();
+    evaluator::test_eval_let_statement();
 
     exit(EXIT_SUCCESS);
 }
