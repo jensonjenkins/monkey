@@ -1,6 +1,5 @@
 #include "../src/lexer.hpp"
 #include "../src/object.hpp"
-#include "../src/scope.hpp"
 #include "../src/evaluator.hpp"
 #include "../src/parser.hpp"
 #include <iostream>

@@ -40,15 +40,13 @@ public:
         return buf;
     }
     
-    const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { 
-        return _statements; 
-    }
+    const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { return _statements; }
+    std::vector<std::unique_ptr<ast::statement>> trf_statements() noexcept { return std::move(_statements); }
+
     void add_statement(ast::statement* stmt) noexcept { 
         _statements.push_back(std::unique_ptr<ast::statement>(stmt)); 
     }
-    void add_statement(std::unique_ptr<ast::statement>&& stmt) noexcept { 
-        _statements.push_back(std::move(stmt)); 
-    }
+    void add_statement(std::unique_ptr<ast::statement>&& stmt) noexcept { _statements.push_back(std::move(stmt)); }
 
 protected: 
     /**
@@ -307,7 +305,10 @@ public:
     function_literal(token::token token) noexcept : _token(token) {};
     
     const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
-    const ast::block_statement* body() const noexcept { return _body.get(); }
+    ast::block_statement* body() const noexcept { return _body.get(); }
+
+    std::vector<std::unique_ptr<ast::identifier>> trf_parameters() noexcept { return std::move(_parameters); }
+    std::unique_ptr<ast::block_statement> trf_body() noexcept { return std::move(_body); }
 
     void set_parameters(std::vector<ast::identifier*> stmt) noexcept {
         for(ast::identifier* s : stmt) {
@@ -342,6 +343,8 @@ public:
     call_expression(token::token token, ast::expression* function) noexcept : _token(token) { set_function(function); }
 
     const std::vector<std::unique_ptr<ast::expression>>& arguments() const noexcept { return _arguments; }
+    std::vector<std::unique_ptr<ast::expression>> trf_arguments() noexcept { return std::move(_arguments); }
+
     ast::expression* function() const noexcept { return _function.get(); }
 
     void set_arguments(std::vector<ast::expression*> stmt) noexcept {

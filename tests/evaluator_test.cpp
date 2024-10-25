@@ -214,6 +214,38 @@ void test_eval_let_statement() {
     std::cout<<"7 - ok: evaluate let statements."<<std::endl;
 }
 
+void test_function_object() {
+    const char* input = "fn(x) { x + 2; };";
+    object::object* evaluated = const_cast<object::object*>(test_eval(input));
+    object::function* fn = try_cast<object::function*>(evaluated, "test_function_object - not a fn obj.");
+    assert_value(fn->parameters().size(), 1, "test_function_object - parameter count");
+    assert_value(fn->parameters()[0]->to_string(), "x", "test_function_object - parameter");
+    assert_value(fn->body()->to_string(), "(x + 2)\n", "test_function_object - body");
+
+    std::cout<<"8 - ok: evaluate fn object."<<std::endl;
+}
+
+void test_eval_function() {
+    using test_case = test_case_base<std::int64_t>;
+    std::vector<test_case> tc {
+        {"let identity = fn(x) { x; }; identity(6);", 6},
+        {"let identity = fn(x) { return x; }; identity(4);", 4},
+        {"let double = fn(x) { x * 2; }; double(6);", 12},
+        {"let add = fn(x, y) { x + y; }; add(112, 10);", 122},
+        {R"(
+        let add = fn(x, y) { x + y; }; 
+        let sub = fn(x, y) { x - y; }; 
+        add(10, sub(9,  8));
+        )", 11},
+        {"fn(x) { x; }(5)", 5}
+    };
+    for(int i=0;i<tc.size();i++){
+        test_integer_object(test_eval(tc[i].input), tc[i].expected);
+    }
+
+    std::cout<<"9 - ok: evaluate fn expressions."<<std::endl;
+}
+
 } // namespace evaluator
 
 size_t parser::trace::_indent_level = 0;
@@ -229,6 +261,8 @@ int main() {
     evaluator::test_return_statements();
     evaluator::test_error_handling();
     evaluator::test_eval_let_statement();
+    evaluator::test_function_object();
+    evaluator::test_eval_function();
 
     exit(EXIT_SUCCESS);
 }

@@ -2,7 +2,6 @@
 
 #include "trace.hpp"
 #include "object.hpp"
-#include "scope.hpp"
 #include "ast.hpp"
 
 namespace evaluator {
@@ -131,6 +130,7 @@ static bool is_truthy(object::object* o) noexcept {
 }
 
 static object::object* eval_if_expression(ast::if_expression* ie, object::scope* scope) noexcept {
+    parser::trace t("eval if expr: " + ie->to_string());
     object::object* condition = eval(ie->condition(), scope);
     if (is_error(condition)) {
         return condition;
@@ -145,10 +145,11 @@ static object::object* eval_if_expression(ast::if_expression* ie, object::scope*
 }
 
 static object::object* eval_block_statement(ast::block_statement* block, object::scope* scope) noexcept {
+    parser::trace t("eval block statement: " + block->to_string());
     object::object* result;
     const std::vector<std::unique_ptr<ast::statement>>& stmts = block->statements();
     for(const auto& stmt : stmts){
-        result = eval(stmt.get(), scope);
+    result = eval(stmt.get(), scope);
 
         if (result != nullptr) {
             object::object_t rt = result->type();
@@ -162,12 +163,59 @@ static object::object* eval_block_statement(ast::block_statement* block, object:
 }
 
 static object::object* eval_identifier(ast::identifier* ident, object::scope* scope) {
+    parser::trace t("eval_identifier: " + ident->to_string());
     object::object* res = scope->get(ident->value());
     if(res == nullptr) {
         return new object::error("identifier not found: " + std::string(ident->value()));
     }
     return res;
 }
+
+static std::vector<object::object*> eval_expressions(std::vector<std::unique_ptr<ast::expression>> exps, 
+        object::scope* scope) noexcept {
+    parser::trace t("eval_expressions");
+    std::vector<object::object*> res;
+
+    for (const auto& exp : exps) {
+        object::object* evaluated = eval(exp.get(), scope);
+        if (is_error(evaluated)) {
+            return std::vector<object::object*> { evaluated };
+        }
+        res.push_back(evaluated);
+    }
+    return res;
+}
+
+static object::object* unwrap_return_value(object::object* obj) noexcept {
+    parser::trace t("unwrap_return_value: " + obj->inspect());
+    if (auto o = dynamic_cast<object::return_value*>(obj)) {
+        return o->value();
+    }
+    return obj;
+}
+
+static object::scope* extend_fn_scope(object::function* fn, std::vector<object::object*> args) noexcept {
+    parser::trace t("extend fn scope: " + fn->inspect());
+    
+    object::scope* extended_scope = new object::scope(fn->get_scope());
+    for(int i = 0; i < fn->parameters().size(); i++) {
+        extended_scope->set(fn->parameters()[i]->value(), args[i]);
+    }
+    return extended_scope;
+}
+
+static object::object* apply_function(object::object* fn, std::vector<object::object*> args) noexcept {
+    parser::trace t("apply function: " + fn->inspect());
+    object::function* function = dynamic_cast<object::function*>(fn);
+    if (function == nullptr) {
+        return new object::error("not a function: " + std::string(fn->type()));
+    }
+    object::scope* extended_scope = extend_fn_scope(function, args);
+    object::object* evaluated = eval(function->body(), extended_scope);
+
+    return unwrap_return_value(evaluated);
+}
+
 
 static object::object* eval(ast::node* node, object::scope* scope) {
     parser::trace t("eval");
@@ -184,9 +232,11 @@ static object::object* eval(ast::node* node, object::scope* scope) {
     
     // Expressions
     if (auto* n = dynamic_cast<ast::identifier*>(node)) {
+        parser::trace t("eval_ident_expr");
         return eval_identifier(n, scope);
     }
     if (auto* n = dynamic_cast<ast::let_statement*>(node)) {
+        parser::trace t("eval_let_stmt");
         object::object* val = eval(n->value(), scope);
         if (is_error(val)) {
             return val;
@@ -224,6 +274,22 @@ static object::object* eval(ast::node* node, object::scope* scope) {
             return val;
         }
         return new object::return_value(std::unique_ptr<object::object>(val));
+    }
+    if (auto* n = dynamic_cast<ast::function_literal*>(node)) {
+        parser::trace t("eval_fn_lit");
+        return new object::function(n->trf_parameters(), n->trf_body());
+    }
+    if (auto* n = dynamic_cast<ast::call_expression*>(node)) {
+        parser::trace t("eval_call_expr");
+        object::object* fn = eval(n->function(), scope);
+        if (is_error(fn)) {
+            return fn;
+        }
+        std::vector<object::object*> args = eval_expressions(n->trf_arguments(), scope);
+        if (args.size() == 1 && is_error(args[0])) {
+            return args[0];
+        }
+        return apply_function(fn, args);
     }
     if (auto* n = dynamic_cast<ast::if_expression*>(node)) {
         parser::trace t("eval_if_expr");

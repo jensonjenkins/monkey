@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast.hpp"
 #include <string>
 
 namespace object {
@@ -11,11 +12,53 @@ constexpr object_t BOOLEAN_OBJ      = "BOOLEAN";
 constexpr object_t NULL_OBJ         = "NULL";
 constexpr object_t RETURN_VALUE_OBJ = "RETURN_VALUE";
 constexpr object_t ERROR_OBJ        = "ERROR";
+constexpr object_t FUNCTION_OBJ     = "FUNCTION";
 
 struct object {
     const virtual std::string& inspect() const noexcept = 0;
     const virtual object_t& type() const noexcept = 0;
     virtual ~object() noexcept = default; 
+};
+
+class scope {
+public:
+    scope() noexcept = default;
+    
+    /**
+     * Initializes a new scope with the outer scope initialized to this outer scope
+     * @param outer the outer scope
+     */
+    scope(scope* outer) noexcept {
+        scope* env = new scope();
+        env->_outer = outer;
+    }
+
+    object* get(std::string_view name) const noexcept {
+        auto it = _store.find(name);
+        if(it == _store.end() && _outer != nullptr) {
+            return _outer->get(name);
+        } else if (it == _store.end()) {
+            return nullptr;
+        }
+        return it->second;
+    }
+
+    object* set(std::string_view name, object* val) noexcept {
+        _store[name] = val;
+        return val;
+    }
+
+    const size_t scope_size() const noexcept { 
+        if(_outer != nullptr) {
+            return _outer->scope_size() + _store.size(); 
+        } else {
+            return _store.size();
+        }
+    }
+
+protected:
+    scope*                                          _outer;
+    std::unordered_map<std::string_view, object*>   _store;
 };
 
 class integer : public object {
@@ -27,7 +70,7 @@ public:
 
     const std::string& inspect() const noexcept { return _to_string; }
     const object_t& type() const noexcept { return INTEGER_OBJ; }
-protected:
+private:
     std::string     _to_string;
     std::int64_t    _value;
 };
@@ -41,7 +84,7 @@ public:
 
     const std::string& inspect() const noexcept { return _to_string; }
     const object_t& type() const noexcept { return BOOLEAN_OBJ; }
-protected:
+private:
     std::string     _to_string;
     bool            _value;
 };
@@ -53,7 +96,7 @@ public:
     const std::string& inspect() const noexcept { return _to_string; }
     const object_t& type() const noexcept { return NULL_OBJ; }
 
-protected:
+private:
     std::string     _to_string = "null";
 };
 
@@ -65,7 +108,7 @@ public:
 
     const std::string& inspect() const noexcept { return _value->inspect(); }
     const object_t& type() const noexcept { return RETURN_VALUE_OBJ; }
-protected:
+private:
     std::unique_ptr<object> _value;
 };
 
@@ -77,9 +120,40 @@ public:
     const std::string& inspect() const noexcept { return _message; }
     const object_t& type() const noexcept { return ERROR_OBJ; }
 
-protected:
+private:
     std::string _message;
 };
+
+class function : public object {
+public:
+    function() noexcept { build_to_string(); }
+    function(std::vector<std::unique_ptr<ast::identifier>> parameters, std::unique_ptr<ast::block_statement> body) 
+        noexcept : _parameters(std::move(parameters)), _body(std::move(body)) { build_to_string(); }
+
+    const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
+    ast::block_statement* body() const noexcept { return _body.get(); }
+    scope* get_scope() const noexcept { return _scope.get(); }
+
+    const std::string& inspect() const noexcept { return _to_string; }
+    const object_t& type() const noexcept { return FUNCTION_OBJ; }
+    
+private:
+    void build_to_string() noexcept {
+        _to_string += "fn(";
+        for(int i=0;i<_parameters.size();i++){
+            ast::identifier* ident = _parameters[i].get();
+            _to_string += ident->to_string() + ',';
+        }
+        _to_string += ")";
+        _to_string += _body->to_string();
+    }
+
+    std::string                                     _to_string;
+    std::unique_ptr<scope>                          _scope;
+    std::unique_ptr<ast::block_statement>           _body;
+    std::vector<std::unique_ptr<ast::identifier>>   _parameters;
+};
+
 
 } // namespace object
 
