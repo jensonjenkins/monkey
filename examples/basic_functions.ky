@@ -1,0 +1,9 @@
+let do_something = fn(x, y) {
+    return x + y;
+};
+
+let do_another_thing = fn(x, y, z) {
+    return x * y + z;
+};
+
+do_something(5, do_another_thing(6, 7, 8)); 
