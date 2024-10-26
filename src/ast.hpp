@@ -365,5 +365,20 @@ protected:
     std::vector<std::unique_ptr<ast::expression>>   _arguments;
 };
 
+class string_literal : public expression {
+public:
+    string_literal() noexcept = default;
+    string_literal(token::token token, std::string_view value) noexcept : _token(token), _value(value) {}
+
+    const std::string& value() const noexcept { return _value; }
+
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override { return _value; }
+
+protected:
+    token::token    _token;
+    std::string     _value;
+};
+
 } // namespace ast
 

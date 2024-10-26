@@ -234,6 +234,10 @@ static object::object* eval(ast::node* node, object::scope* scope) {
         parser::trace t("eval_ident_expr");
         return eval_identifier(n, scope);
     }
+    if (auto* n = dynamic_cast<ast::string_literal*>(node)) {
+        parser::trace t("eval_ident_expr");
+        return new object::string(n->value());
+    }
     if (auto* n = dynamic_cast<ast::let_statement*>(node)) {
         parser::trace t("eval_let_stmt");
         object::object* val = eval(n->value(), scope);

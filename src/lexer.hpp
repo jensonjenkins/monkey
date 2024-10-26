@@ -87,6 +87,9 @@ public:
         case '}':
             cur_token.set(token::RBRACE, cur_char);
             break;
+        case '"':
+            cur_token.set(token::STRING, read_string());
+            break;
         case 0:
             cur_token.set(token::EOFT, "");
             break;
@@ -103,6 +106,18 @@ public:
         }
         
         return cur_token;
+    }
+
+    std::string_view read_string() noexcept {
+        std::uint32_t start = _cursor + 1;
+        for(;;){
+            read_char();
+            if(_cur_char == '"' || _cur_char == 0){
+                break;
+            }
+        }
+        std::string_view identifier(_input + start, _cursor - start);
+        return identifier;
     }
 
     char peek_char() const noexcept {

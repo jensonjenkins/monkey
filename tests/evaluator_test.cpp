@@ -266,6 +266,18 @@ void test_recursion() {
   std::cout << "10 - ok: evaluate recursion." << std::endl;
 }
 
+void test_eval_string_literal() {
+  const char *input = R"(
+        "Hello World!"
+    )";
+    
+  object::object* evaluated = const_cast<object::object*>(test_eval(input));
+  object::string* str = try_cast<object::string*>(evaluated, "test_eval_str_lit - obj not string object");
+  assert_value(str->value(), "Hello World!", "test_eval_str_lit - str literal value"); 
+
+  std::cout << "11 - ok: evaluate string literal." << std::endl;
+}
+
 } // namespace evaluator
 
 size_t parser::trace::_indent_level = 0;
@@ -284,6 +296,7 @@ int main() {
   evaluator::test_function_object();
   evaluator::test_eval_function();
   evaluator::test_recursion();
+  evaluator::test_eval_string_literal();
 
   exit(EXIT_SUCCESS);
 }

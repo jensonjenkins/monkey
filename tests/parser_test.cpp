@@ -522,6 +522,23 @@ void test_parse_call_expression() {
     std::cout<<"12 - ok: parse function call expression."<<std::endl;
 }
 
+void test_string_literal_expression() {
+    const char* input = R"(
+        "hello world";
+    )";
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+
+    assert_value(program->statements().size(), 1, "test_str_lit_expr - program statements size");
+    ast::expression_statement* e = try_cast<ast::expression_statement*>(
+            program->statements()[0].get(), "test_str_lit_expr - statement not an expr stmt.");
+    ast::string_literal* lit = try_cast<ast::string_literal*>(e->expr(), "test_str_lit_expr - statement not a string literal.");
+    assert_value(lit->value(), "hello world", "test_str_lit_expr - string literal value");
+
+    std::cout<<"13 - ok: parse string literals."<<std::endl;
+}
 
 } //namespace parser
 
@@ -547,6 +564,7 @@ int main(){
     parser::test_parse_function_literal();
     parser::test_parse_function_parameter();
     parser::test_parse_call_expression();
+    parser::test_string_literal_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

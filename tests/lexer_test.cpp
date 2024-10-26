@@ -7,7 +7,7 @@ namespace lexer {
 
 struct expected {
     token::token_t expected_token;
-    const char* expected_literal;
+    std::string_view expected_literal;
 
     expected(token::token_t exp_token, const char* exp_lit) 
         : expected_token(exp_token), expected_literal(exp_lit) {};
@@ -41,7 +41,7 @@ void test_next_token_1() {
         }
         if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_1 - expected literal: "
-                << *test_case[i].expected_literal
+                << std::string(test_case[i].expected_literal)
                 << ", got: "
                 << cur_token.get_type()
                 << std::endl;
@@ -61,6 +61,9 @@ void test_next_token_2() {
     };
 
     let result = add(five, ten);
+
+    "foobar"
+    "foo bar"
     )";
     std::vector<expected> test_case = {
         {token::LET, "let"}, 
@@ -103,6 +106,9 @@ void test_next_token_2() {
         {token::RPAREN, ")"}, 
         {token::SEMICOLON, ";"}, 
 
+        {token::STRING, "foobar"}, 
+        {token::STRING, "foo bar"}, 
+
         {token::EOFT, ""}
     };
 
@@ -120,7 +126,7 @@ void test_next_token_2() {
         }
         if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_2 - expected literal: "
-                << *test_case[i].expected_literal
+                << std::string(test_case[i].expected_literal)
                 << ", got: "
                 << cur_token.token_literal()
                 << std::endl;
@@ -166,7 +172,7 @@ void test_next_token_3() {
         }
         if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_3 - expected literal: "
-                << *test_case[i].expected_literal
+                << std::string(test_case[i].expected_literal)
                 << ", got: "
                 << cur_token.token_literal()
                 << std::endl;
@@ -232,7 +238,7 @@ void test_next_token_4() {
         }
         if(std::string_view(test_case[i].expected_literal) != cur_token.token_literal()){
             std::cout << "test_next_token_4 - expected literal: "
-                << *test_case[i].expected_literal
+                << std::string(test_case[i].expected_literal)
                 << ", got: "
                 << cur_token.token_literal()
                 << std::endl;

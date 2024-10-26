@@ -60,6 +60,7 @@ public:
         register_prefix_fn(token::LPAREN,   [this]() -> ast::expression* { return this->parse_grouped_expr(); });
         register_prefix_fn(token::IF,       [this]() -> ast::expression* { return this->parse_if_expression(); });
         register_prefix_fn(token::FUNCTION, [this]() -> ast::expression* { return this->parse_function_literal(); });
+        register_prefix_fn(token::STRING,   [this]() -> ast::expression* { return this->parse_string_literal(); });
 
         register_infix_fn(token::PLUS,      [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::MINUS,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
@@ -191,6 +192,12 @@ public:
         std::int64_t val = std::stoll(std::string(_cur_token.token_literal()));
         ast::expression* lit = new ast::int_literal(_cur_token, val); 
         return lit;
+    }
+
+    ast::expression* parse_string_literal() const noexcept {
+        trace t("parse_str_literal: " + std::string(_cur_token.token_literal()));
+        ast::expression* string_lit = new ast::string_literal(_cur_token, _cur_token.token_literal());
+        return string_lit;
     }
 
     ast::expression* parse_prefix_expr() noexcept {
