@@ -148,9 +148,9 @@ static object::object* eval_block_statement(ast::block_statement* block, object:
     parser::trace t("eval block statement: " + block->to_string());
     object::object* result;
     const std::vector<std::unique_ptr<ast::statement>>& stmts = block->statements();
-    for(const auto& stmt : stmts){
-    result = eval(stmt.get(), scope);
 
+    for(const auto& stmt : stmts){
+        result = eval(stmt.get(), scope);
         if (result != nullptr) {
             object::object_t rt = result->type();
             if (rt == object::RETURN_VALUE_OBJ || rt == object::ERROR_OBJ) {
@@ -171,7 +171,7 @@ static object::object* eval_identifier(ast::identifier* ident, object::scope* sc
     return res;
 }
 
-static std::vector<object::object*> eval_expressions(std::vector<std::unique_ptr<ast::expression>> exps, 
+static std::vector<object::object*> eval_expressions(const std::vector<std::unique_ptr<ast::expression>>& exps, 
         object::scope* scope) noexcept {
     parser::trace t("eval_expressions");
     std::vector<object::object*> res;
@@ -195,8 +195,7 @@ static object::object* unwrap_return_value(object::object* obj) noexcept {
 }
 
 static object::scope* extend_fn_scope(object::function* fn, std::vector<object::object*> args) noexcept {
-    parser::trace t("extend fn scope: " + fn->inspect());
-    
+    parser::trace t("extend current fn scope: " + fn->get_scope()->list_scope()); 
     object::scope* extended_scope = new object::scope(fn->get_scope());
     for(int i = 0; i < fn->parameters().size(); i++) {
         extended_scope->set(fn->parameters()[i]->value(), args[i]);
@@ -207,6 +206,7 @@ static object::scope* extend_fn_scope(object::function* fn, std::vector<object::
 static object::object* apply_function(object::object* fn, std::vector<object::object*> args) noexcept {
     parser::trace t("apply function: " + fn->inspect());
     object::function* function = dynamic_cast<object::function*>(fn);
+
     if (function == nullptr) {
         return new object::error("not a function: " + std::string(fn->type()));
     }
@@ -215,7 +215,6 @@ static object::object* apply_function(object::object* fn, std::vector<object::ob
 
     return unwrap_return_value(evaluated);
 }
-
 
 static object::object* eval(ast::node* node, object::scope* scope) {
     parser::trace t("eval");
@@ -277,7 +276,7 @@ static object::object* eval(ast::node* node, object::scope* scope) {
     }
     if (auto* n = dynamic_cast<ast::function_literal*>(node)) {
         parser::trace t("eval_fn_lit");
-        return new object::function(n->trf_parameters(), n->trf_body());
+        return new object::function(n->parameters(), n->body(), scope);
     }
     if (auto* n = dynamic_cast<ast::call_expression*>(node)) {
         parser::trace t("eval_call_expr");
@@ -285,7 +284,7 @@ static object::object* eval(ast::node* node, object::scope* scope) {
         if (is_error(fn)) {
             return fn;
         }
-        std::vector<object::object*> args = eval_expressions(n->trf_arguments(), scope);
+        std::vector<object::object*> args = eval_expressions(n->arguments(), scope);
         if (args.size() == 1 && is_error(args[0])) {
             return args[0];
         }

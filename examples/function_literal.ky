@@ -1,0 +1,7 @@
+
+let a = 5;
+
+let square = fn(x) { return x * x; };
+let cube = fn(x) { return square(x) * x; };
+
+fn(x) { cube(x) + x }(a);

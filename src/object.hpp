@@ -28,10 +28,7 @@ public:
      * Initializes a new scope with the outer scope initialized to this outer scope
      * @param outer the outer scope
      */
-    scope(scope* outer) noexcept {
-        scope* env = new scope();
-        env->_outer = outer;
-    }
+    scope(scope* outer) noexcept : _outer(outer) {}
 
     object* get(std::string_view name) const noexcept {
         auto it = _store.find(name);
@@ -54,6 +51,17 @@ public:
         } else {
             return _store.size();
         }
+    }
+
+    const std::string list_scope() const noexcept {
+        std::string buf;
+        if(_outer != nullptr) {
+            buf += _outer->list_scope();
+        }
+        for (auto item : _store) {
+            buf += std::string(item.first) + ", ";
+        }
+        return buf;
     }
 
 protected:
@@ -126,13 +134,12 @@ private:
 
 class function : public object {
 public:
-    function() noexcept { build_to_string(); }
-    function(std::vector<std::unique_ptr<ast::identifier>> parameters, std::unique_ptr<ast::block_statement> body) 
-        noexcept : _parameters(std::move(parameters)), _body(std::move(body)) { build_to_string(); }
+    function(const std::vector<std::unique_ptr<ast::identifier>>& parameters, ast::block_statement* body, scope* scope) 
+        noexcept : _parameters(parameters), _body(body), _scope(scope) { build_to_string(); }
 
     const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
-    ast::block_statement* body() const noexcept { return _body.get(); }
-    scope* get_scope() const noexcept { return _scope.get(); }
+    ast::block_statement* body() const noexcept { return _body; }
+    scope* get_scope() const noexcept { return _scope; }
 
     const std::string& inspect() const noexcept { return _to_string; }
     const object_t& type() const noexcept { return FUNCTION_OBJ; }
@@ -141,17 +148,16 @@ private:
     void build_to_string() noexcept {
         _to_string += "fn(";
         for(int i=0;i<_parameters.size();i++){
-            ast::identifier* ident = _parameters[i].get();
-            _to_string += ident->to_string() + ',';
+            _to_string += _parameters[i]->to_string() + ',';
         }
         _to_string += ")";
         _to_string += _body->to_string();
     }
 
-    std::string                                     _to_string;
-    std::unique_ptr<scope>                          _scope;
-    std::unique_ptr<ast::block_statement>           _body;
-    std::vector<std::unique_ptr<ast::identifier>>   _parameters;
+    scope*                                                  _scope;
+    std::string                                             _to_string;
+    ast::block_statement*                                   _body;
+    const std::vector<std::unique_ptr<ast::identifier>>&    _parameters;
 };
 
 

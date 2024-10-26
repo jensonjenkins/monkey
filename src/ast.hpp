@@ -35,7 +35,7 @@ public:
         std::string buf;
         for(int i=0;i<_statements.size();i++){
             ast::statement* stmt = _statements[i].get();
-            buf += stmt->to_string() + '\n';
+            buf += stmt->to_string();
         }
         return buf;
     }
@@ -242,16 +242,13 @@ class block_statement : public statement {
 public:
     const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { return _statements; }
 
-    void add_statement(ast::statement* stmt) noexcept { 
-        _statements.push_back(std::unique_ptr<ast::statement>(stmt)); 
-    }
+    void add_statement(ast::statement* stmt) noexcept { _statements.push_back(std::unique_ptr<ast::statement>(stmt)); }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
         std::string buf;
         for(int i=0;i<_statements.size();i++){
-            ast::statement* stmt = _statements[i].get();
-            buf += stmt->to_string() + '\n';
+            buf += _statements[i]->to_string();
         }
         return buf;
     }
@@ -307,9 +304,6 @@ public:
     const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
     ast::block_statement* body() const noexcept { return _body.get(); }
 
-    std::vector<std::unique_ptr<ast::identifier>> trf_parameters() noexcept { return std::move(_parameters); }
-    std::unique_ptr<ast::block_statement> trf_body() noexcept { return std::move(_body); }
-
     void set_parameters(std::vector<ast::identifier*> stmt) noexcept {
         for(ast::identifier* s : stmt) {
             _parameters.push_back(std::unique_ptr<ast::identifier>(s));
@@ -323,8 +317,7 @@ public:
         buf += _token.token_literal();
         buf += "(";
         for(int i=0;i<_parameters.size();i++){
-            ast::identifier* ident = _parameters[i].get();
-            buf += ident->to_string() + ',';
+            buf += _parameters[i]->to_string() + ',';
         }
         buf += ")";
         buf += _body->to_string();
@@ -342,8 +335,7 @@ public:
     call_expression() noexcept = default;
     call_expression(token::token token, ast::expression* function) noexcept : _token(token) { set_function(function); }
 
-    const std::vector<std::unique_ptr<ast::expression>>& arguments() const noexcept { return _arguments; }
-    std::vector<std::unique_ptr<ast::expression>> trf_arguments() noexcept { return std::move(_arguments); }
+    const std::vector<std::unique_ptr<ast::expression>>& arguments() noexcept { return _arguments; }
 
     ast::expression* function() const noexcept { return _function.get(); }
 
@@ -360,9 +352,8 @@ public:
         buf += _function->token_literal();
         buf += "(";
         for(int i=0;i<_arguments.size();i++){
-            ast::expression* expr= _arguments[i].get();
-            buf += expr->to_string();
-            if(i != _arguments.size() - 1) {  buf += ", "; }
+            buf += _arguments[i]->to_string();
+            if(i != _arguments.size() - 1) { buf += ", "; }
         }
         buf += ")";
         return buf;
