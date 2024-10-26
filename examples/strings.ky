@@ -1,0 +1,5 @@
+let print = fn(x) {
+    return x;
+};
+
+print("Hello World!");
