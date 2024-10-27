@@ -1,5 +1,6 @@
 #pragma once
 
+#include "builtin_fns.hpp"
 #include "trace.hpp"
 #include "object.hpp"
 #include "ast.hpp"
@@ -178,6 +179,9 @@ static object::object* eval_identifier(ast::identifier* ident, object::scope* sc
     if(object::object* res = scope->get(ident->value())) {
         return res;
     }
+    if(object::object* builtin_fn = get_builtin(ident->value())) {
+        return builtin_fn;
+    }
     return new object::error("identifier not found: " + std::string(ident->value()));
 }
 
@@ -207,7 +211,7 @@ static object::object* unwrap_return_value(object::object* obj) noexcept {
 static object::scope* extend_fn_scope(object::function* fn, std::vector<object::object*> args) noexcept {
     parser::trace t("extend current fn scope: " + fn->get_scope()->list_scope()); 
     object::scope* extended_scope = new object::scope(fn->get_scope());
-    for(int i = 0; i < fn->parameters().size(); i++) {
+    for (int i = 0; i < fn->parameters().size(); i++) {
         extended_scope->set(fn->parameters()[i]->value(), args[i]);
     }
     return extended_scope;
@@ -215,15 +219,17 @@ static object::scope* extend_fn_scope(object::function* fn, std::vector<object::
 
 static object::object* apply_function(object::object* fn, std::vector<object::object*> args) noexcept {
     parser::trace t("apply function: " + fn->inspect());
-    object::function* function = dynamic_cast<object::function*>(fn);
+    if (object::function* function = dynamic_cast<object::function*>(fn)) {
+        object::scope* extended_scope = extend_fn_scope(function, args);
+        object::object* evaluated = eval(function->body(), extended_scope);
 
-    if (function == nullptr) {
-        return new object::error("not a function: " + std::string(fn->type()));
+        return unwrap_return_value(evaluated);
     }
-    object::scope* extended_scope = extend_fn_scope(function, args);
-    object::object* evaluated = eval(function->body(), extended_scope);
+    if (object::builtin* builtin_fn = dynamic_cast<object::builtin*>(fn)) {
+        return builtin_fn->fn()(args);
+    }
 
-    return unwrap_return_value(evaluated);
+    return new object::error("not a function: " + std::string(fn->type()));
 }
 
 static object::object* eval(ast::node* node, object::scope* scope) {

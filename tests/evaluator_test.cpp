@@ -299,6 +299,7 @@ void test_builtin_functions() {
   for (int i = 0; i < tc.size(); i++) {
     test_integer_object(test_eval(tc[i].input), tc[i].expected);
   }
+  std::cout << "13 - ok: builtin functions." << std::endl;
 }
 
 void test_builtin_function_errors() {
@@ -312,6 +313,7 @@ void test_builtin_function_errors() {
     object::error *eo = try_cast<object::error *>(evaluated, "test_error_handling - not an error obj.");
     assert_value(eo->inspect(), tc[i].expected, "test_error_handling - error message");
   }
+  std::cout << "14 - ok: builtin function errors." << std::endl;
 }
 
 
@@ -335,8 +337,8 @@ int main() {
   evaluator::test_recursion();
   evaluator::test_eval_string_literal();
   evaluator::test_string_concatenation();
-  // evaluator::test_builtin_functions();
-  // evaluator::test_builtin_function_errors();
+  evaluator::test_builtin_functions();
+  evaluator::test_builtin_function_errors();
 
   exit(EXIT_SUCCESS);
 }

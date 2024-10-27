@@ -175,6 +175,23 @@ private:
     std::string _value;
 };
 
+using builtin_fn_t = std::function<object*(std::vector<object*>)>;
+
+class builtin : public object {
+public:
+    builtin() noexcept = default;
+    builtin(builtin_fn_t fn) noexcept : _fn(fn) {};
+
+    builtin_fn_t fn() noexcept { return _fn; }
+
+    const std::string& inspect() const noexcept { return _inspect; }
+    const object_t& type() const noexcept { return BUIILTIN_OBJ; }
+    
+private:
+    std::string     _inspect = "builtin function";
+    builtin_fn_t    _fn;
+};
+
 } // namespace object
 
 
