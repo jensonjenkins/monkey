@@ -1,13 +1,12 @@
 # monkey
 
 ### As of current iteration only supports:
-- basic function defintion and calls
+- identifier definitions
+- function defintion and calls
 - arithmetic operations
-- !=, ==, <, > comparators
+- comparators (!=, ==, <, >)
 - conditional statements
-- 64-bit signed ints 
-- bools
-- assignment (let a = 5;)
+- datatypes: 64-bit signed ints, bools, null
 
 ### To build tests and executables: 
 ```sh
