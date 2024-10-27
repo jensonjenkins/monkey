@@ -190,14 +190,14 @@ void test_error_handling() {
         )",
        "unknown operator: BOOLEAN + BOOLEAN"},
       {"foobar", "identifier not found: foobar"},
+      {R"(
+      "Hello" - "World"
+      )", "unknown operator: STRING - STRING"},
   };
   for (int i = 0; i < tc.size(); i++) {
-    object::object *evaluated =
-        const_cast<object::object *>(test_eval(tc[i].input));
-    object::error *eo = try_cast<object::error *>(
-        evaluated, "test_error_handling - not an error obj.");
-    assert_value(eo->inspect(), tc[i].expected,
-                 "test_error_handling - error message");
+    object::object *evaluated =const_cast<object::object *>(test_eval(tc[i].input));
+    object::error *eo = try_cast<object::error *>(evaluated, "test_error_handling - not an error obj.");
+    assert_value(eo->inspect(), tc[i].expected, "test_error_handling - error message");
   }
   std::cout << "6 - ok: evaluate error handling." << std::endl;
 }
@@ -278,6 +278,43 @@ void test_eval_string_literal() {
   std::cout << "11 - ok: evaluate string literal." << std::endl;
 }
 
+void test_string_concatenation() {
+  const char *input = R"(
+        "Hello"  + " " + "World!"
+    )";
+  object::object* evaluated = const_cast<object::object*>(test_eval(input));
+  object::string* str = try_cast<object::string*>(evaluated, "test_str_concat - obj not string object");
+  assert_value(str->value(), "Hello World!", "test_str_concat - str literal value"); 
+
+  std::cout << "12 - ok: concatenate string literal." << std::endl;
+}
+
+void test_builtin_functions() {
+  using test_case = test_case_base<std::int64_t>;
+  std::vector<test_case> tc{
+      {R"(len(""))", 0},
+      {R"(len("four"))", 4},
+      {R"(len("hello world"))", 11},
+  };
+  for (int i = 0; i < tc.size(); i++) {
+    test_integer_object(test_eval(tc[i].input), tc[i].expected);
+  }
+}
+
+void test_builtin_function_errors() {
+  using test_case = test_case_base<std::string>;
+  std::vector<test_case> tc{
+      {R"(len(1))", "argument to len not supported, got INTEGER"},
+      {R"(len("one", "two"))", "wrong number of arguments. got=2, want=1"},
+  };
+  for (int i = 0; i < tc.size(); i++) {
+    object::object *evaluated =const_cast<object::object *>(test_eval(tc[i].input));
+    object::error *eo = try_cast<object::error *>(evaluated, "test_error_handling - not an error obj.");
+    assert_value(eo->inspect(), tc[i].expected, "test_error_handling - error message");
+  }
+}
+
+
 } // namespace evaluator
 
 size_t parser::trace::_indent_level = 0;
@@ -297,6 +334,11 @@ int main() {
   evaluator::test_eval_function();
   evaluator::test_recursion();
   evaluator::test_eval_string_literal();
+  evaluator::test_string_concatenation();
+  // evaluator::test_builtin_functions();
+  // evaluator::test_builtin_function_errors();
 
   exit(EXIT_SUCCESS);
 }
+
+

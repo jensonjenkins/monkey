@@ -14,6 +14,7 @@ constexpr object_t RETURN_VALUE_OBJ = "RETURN_VALUE";
 constexpr object_t ERROR_OBJ        = "ERROR";
 constexpr object_t FUNCTION_OBJ     = "FUNCTION";
 constexpr object_t STRING_OBJ       = "STRING";
+constexpr object_t BUIILTIN_OBJ     = "BUILTIN";
 
 struct object {
     const virtual std::string& inspect() const noexcept = 0;
@@ -168,7 +169,7 @@ public:
     const std::string& value() const noexcept { return _value; }
 
     const std::string& inspect() const noexcept { return _value; }
-    const object_t& type() const noexcept { return FUNCTION_OBJ; }
+    const object_t& type() const noexcept { return STRING_OBJ; }
     
 private:
     std::string _value;

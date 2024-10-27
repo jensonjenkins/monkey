@@ -103,6 +103,13 @@ static object::object* eval_integer_infix_expression(object::integer* left, std:
     }
 }
 
+static object::object* eval_string_infix_expression(object::string* left, std::string_view op, object::string* right) noexcept {
+    if(op != "+") {
+        return new object::error("unknown operator: " + std::string(left->type()) + " " + std::string(op) + " " + right->type());
+    }
+    return new object::string(left->value() + right->value());
+}
+
 static object::object* eval_infix_expression(object::object* left, std::string_view op, object::object* right) noexcept {
     parser::trace t("eval_infix_expr_method: " + left->inspect() + " " + std::string(op) + " " + right->inspect());
     if(left->type() == object::INTEGER_OBJ && right->type() == object::INTEGER_OBJ) {
@@ -113,6 +120,10 @@ static object::object* eval_infix_expression(object::object* left, std::string_v
         auto* l = dynamic_cast<object::boolean*>(left);
         auto* r = dynamic_cast<object::boolean*>(right);
         return eval_bool_infix_expression(l, op, r);
+    } else if (left->type() == object::STRING_OBJ && right->type() == object::STRING_OBJ) {
+        auto* l = dynamic_cast<object::string*>(left);
+        auto* r = dynamic_cast<object::string*>(right);
+        return eval_string_infix_expression(l, op, r);
     } else if (left->type() != right->type()) {
         return new object::error("type mismatch: " + std::string(left->type()) + " " + std::string(op) + " " + right->type());
     } else {
@@ -164,11 +175,10 @@ static object::object* eval_block_statement(ast::block_statement* block, object:
 
 static object::object* eval_identifier(ast::identifier* ident, object::scope* scope) {
     parser::trace t("eval_identifier: " + ident->to_string());
-    object::object* res = scope->get(ident->value());
-    if(res == nullptr) {
-        return new object::error("identifier not found: " + std::string(ident->value()));
+    if(object::object* res = scope->get(ident->value())) {
+        return res;
     }
-    return res;
+    return new object::error("identifier not found: " + std::string(ident->value()));
 }
 
 static std::vector<object::object*> eval_expressions(const std::vector<std::unique_ptr<ast::expression>>& exps, 
