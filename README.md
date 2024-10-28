@@ -12,12 +12,11 @@ partial implementation of Thorsten Ball's "Writing an Intepreter in Go" in C++.
 - static arrays + indexing
 
 ### can't:
-- reassign variables
 - mutate arrays or any variable for that matter
 - a lot more
 
 ### Code sample:
-```ml
+``` ml
 let some_function = fn(x, y, z, func) {
     return x + func(y, z);
 }
@@ -30,18 +29,17 @@ some_function(5, 2, 3, my_func);
 
 ```
 ``` ml
-let a = 5;
-
-let counter = fn(x) {
-    if(x > 100) {
-        return x;
+let iterate = fn(start, end, array, sum) {
+    if(start < end) {
+        return iterate(start + 1, end, array, sum + array[start]);
     } else {
-        let foobar = 9999;
-        counter(x + 1);
+        return sum;
     }
 }
 
-counter(a);
+let a = [1, 2, 3, 4, 5];
+
+return iterate(0, 5, a, 0);
 
 ```
 
