@@ -338,7 +338,9 @@ void test_parse_operator_precedence() {
         {"!(true == true)", "(!(true == true))"},
         {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
         {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
-        {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"}
+        {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
+        {"a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"},
+        {"add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))"},
     };
 
     for(int i=0;i<infix_test.size();i++) {
@@ -540,6 +542,44 @@ void test_string_literal_expression() {
     std::cout<<"13 - ok: parse string literals."<<std::endl;
 }
 
+void test_parse_array_literal() {
+    const char* input = "[1, 2 * 2, 3 + 3]";
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+
+    assert_value(program->statements().size(), 1, "test_parse_array_lit - program statements size");
+    ast::expression_statement* e = try_cast<ast::expression_statement*>(
+            program->statements()[0].get(), "test_parse_array_lit - statement not an expr stmt.");
+    ast::array_literal* array = try_cast<ast::array_literal*>(e->expr(), "test_parse_array_lit - statement not an array literal.");
+    assert_value(array->elements().size(), 3, "test_parse_array_lit - array literal size");
+
+    test_integer_literal(array->elements()[0].get(), 1);
+    test_infix_expression(array->elements()[1].get(), 2, "*", 2);
+    test_infix_expression(array->elements()[2].get(), 3, "+", 3);
+
+    std::cout<<"14 - ok: parse array literal."<<std::endl;
+}
+
+void test_parse_index_expression() {
+    const char* input = "my_array[1 + 1]";
+    lexer::lexer l(input);
+    parser p(l);
+    ast::program* program = p.parse_program();
+    check_parser_errors(p);
+
+    assert_value(program->statements().size(), 1, "test_parse_index_expr - program statements size");
+    ast::expression_statement* e = try_cast<ast::expression_statement*>(
+            program->statements()[0].get(), "test_parse_index_expr - statement not an expr stmt.");
+    ast::index_expression* index_expr = try_cast<ast::index_expression*>(e->expr(), "test_parse_index_expr - statement not an index expr.");
+
+    test_identifier(index_expr->left(), "my_array");
+    test_infix_expression(index_expr->index(), 1, "+", 1);
+
+    std::cout<<"15 - ok: parse index expression."<<std::endl;
+}
+
 } //namespace parser
 
 
@@ -565,6 +605,8 @@ int main(){
     parser::test_parse_function_parameter();
     parser::test_parse_call_expression();
     parser::test_string_literal_expression();
+    parser::test_parse_array_literal();
+    parser::test_parse_index_expression();
 
     std::cout<<"parser_test.cpp: ok"<<std::endl;
 

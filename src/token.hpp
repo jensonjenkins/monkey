@@ -8,7 +8,7 @@
 namespace token { 
 
 using token_t = std::uint8_t;
-constexpr size_t token_count = 28;
+constexpr size_t token_count = 30;
 
 constexpr token_t ILLEGAL   = 0;
 constexpr token_t EOFT      = 1;
@@ -45,6 +45,9 @@ constexpr token_t RETURN    = 26;
 
 constexpr token_t STRING    = 27;
 
+constexpr token_t LBRACKET  = 28;
+constexpr token_t RBRACKET  = 29;
+
 const std::unordered_map<std::string_view, token_t> keywords {
     {"fn", FUNCTION},
     {"let", LET},
@@ -62,7 +65,8 @@ const std::array<std::string, token_count> inv_map {
     "COMMA", "SEMICOLON", "BANG", "GT", "LT", "EQ", "NEQ", 
     "LPAREN", "RPAREN", "LBRACE", "RBRACE",
     "FUNCTION", "LET", "TRUE", "FALSE", "IF", "ELSE", "RETURN", 
-    "STRING"
+    "STRING",
+    "LBRACKET", "RBRACKET"
 };
 
 class token {

@@ -191,6 +191,7 @@ void test_next_token_4() {
     }
     10 != 9;
     5 == 5;
+    [1, 2];
     )";
     std::vector<expected> test_case = {
         {token::IF, "if"},
@@ -219,6 +220,13 @@ void test_next_token_4() {
         {token::INT, "5"},
         {token::EQ, "=="},
         {token::INT, "5"},
+        {token::SEMICOLON, ";"},
+
+        {token::LBRACKET, "["},
+        {token::INT, "1"},
+        {token::COMMA, ","},
+        {token::INT, "2"},
+        {token::RBRACKET, "]"},
         {token::SEMICOLON, ";"},
 
         {token::EOFT, ""}

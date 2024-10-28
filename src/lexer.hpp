@@ -87,6 +87,12 @@ public:
         case '}':
             cur_token.set(token::RBRACE, cur_char);
             break;
+        case '[':
+            cur_token.set(token::LBRACKET, cur_char);
+            break;
+        case ']':
+            cur_token.set(token::RBRACKET, cur_char);
+            break;
         case '"':
             cur_token.set(token::STRING, read_string());
             break;

@@ -14,13 +14,18 @@ constexpr object_t RETURN_VALUE_OBJ = "RETURN_VALUE";
 constexpr object_t ERROR_OBJ        = "ERROR";
 constexpr object_t FUNCTION_OBJ     = "FUNCTION";
 constexpr object_t STRING_OBJ       = "STRING";
-constexpr object_t BUIILTIN_OBJ     = "BUILTIN";
+constexpr object_t BUILTIN_OBJ      = "BUILTIN";
+constexpr object_t ARRAY_OBJ        = "ARRAY";
+
 
 struct object {
     const virtual std::string& inspect() const noexcept = 0;
     const virtual object_t& type() const noexcept = 0;
     virtual ~object() noexcept = default; 
 };
+
+using builtin_fn_t = std::function<object*(std::vector<object*>)>;
+
 
 class scope {
 public:
@@ -71,6 +76,7 @@ protected:
     std::unordered_map<std::string_view, object*>   _store;
 };
 
+
 class integer : public object {
 public:
     integer() noexcept = default;
@@ -84,6 +90,7 @@ private:
     std::string     _to_string;
     std::int64_t    _value;
 };
+
 
 class boolean : public object {
 public:
@@ -99,6 +106,7 @@ private:
     bool            _value;
 };
 
+
 class null : public object {
 public:
     null() noexcept = default;
@@ -109,6 +117,7 @@ public:
 private:
     std::string     _to_string = "null";
 };
+
 
 class return_value : public object {
 public:
@@ -122,6 +131,7 @@ private:
     std::unique_ptr<object> _value;
 };
 
+
 class error : public object {
 public:
     error() noexcept = default;
@@ -133,6 +143,7 @@ public:
 private:
     std::string _message;
 };
+
 
 class function : public object {
 public:
@@ -162,6 +173,7 @@ private:
     const std::vector<std::unique_ptr<ast::identifier>>&    _parameters;
 };
 
+
 class string : public object {
 public:
     string(std::string value) noexcept : _value(value) {}
@@ -175,7 +187,6 @@ private:
     std::string _value;
 };
 
-using builtin_fn_t = std::function<object*(std::vector<object*>)>;
 
 class builtin : public object {
 public:
@@ -185,11 +196,40 @@ public:
     builtin_fn_t fn() noexcept { return _fn; }
 
     const std::string& inspect() const noexcept { return _inspect; }
-    const object_t& type() const noexcept { return BUIILTIN_OBJ; }
+    const object_t& type() const noexcept { return BUILTIN_OBJ; }
     
 private:
     std::string     _inspect = "builtin function";
     builtin_fn_t    _fn;
+};
+
+
+class array : public object {
+public:
+    array(std::vector<object*> elements) noexcept {
+        for(object* e : elements) {
+            _elements.push_back(std::unique_ptr<object>(e));
+        }
+        build_to_string();
+    };
+
+    const std::vector<std::unique_ptr<object>>& elements() const noexcept { return _elements; }
+
+    const object_t& type() const noexcept { return ARRAY_OBJ; }
+    const std::string& inspect() const noexcept { return _to_string; }
+    
+private:
+    void build_to_string() noexcept {
+        _to_string += "[";
+        for (int i = 0; i < _elements.size(); i++) {
+            _to_string += _elements[i]->inspect();
+            if (i != _elements.size() - 1) { _to_string += ", "; }
+        }
+        _to_string += "]";
+    }
+
+    std::string                             _to_string;
+    std::vector<std::unique_ptr<object>>    _elements;
 };
 
 } // namespace object

@@ -305,6 +305,7 @@ public:
     ast::block_statement* body() const noexcept { return _body.get(); }
 
     void set_parameters(std::vector<ast::identifier*> stmt) noexcept {
+        _parameters.clear();
         for(ast::identifier* s : stmt) {
             _parameters.push_back(std::unique_ptr<ast::identifier>(s));
         }
@@ -340,6 +341,7 @@ public:
     ast::expression* function() const noexcept { return _function.get(); }
 
     void set_arguments(std::vector<ast::expression*> stmt) noexcept {
+        _arguments.clear();
         for(ast::expression* s : stmt) {
             _arguments.push_back(std::unique_ptr<ast::expression>(s));
         }
@@ -380,5 +382,65 @@ protected:
     std::string     _value;
 };
 
+class array_literal : public expression {
+public:
+    array_literal(token::token token) noexcept : _token(token) {}
+
+    const std::vector<std::unique_ptr<ast::expression>>& elements() const noexcept { return _elements; }
+
+    void set_elements(std::vector<ast::expression*> expr_list) noexcept {
+        _elements.clear();
+        for(ast::expression* expr : expr_list) {
+            _elements.push_back(std::unique_ptr<ast::expression>(expr));
+        }
+    }
+
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        buf += "[";
+        for(int i=0;i<_elements.size();i++){
+            buf += _elements[i]->to_string();
+            if(i != _elements.size() - 1) { buf += ", "; }
+        }
+        buf += "]";
+        return buf;
+    }
+
+protected:
+    token::token                                    _token; // the '[ token
+    std::vector<std::unique_ptr<ast::expression>>   _elements;
+
+}; 
+
+class index_expression : public expression {
+public:
+    index_expression(token::token token, ast::expression* left) noexcept : _token(token) { set_left(left); }
+
+    ast::expression* left() const noexcept { return _left.get(); }
+    ast::expression* index() const noexcept { return _index.get(); }
+
+    void set_left(ast::expression* left) noexcept { _left = std::unique_ptr<ast::expression>(left); }
+    void set_index(ast::expression* index) noexcept { _index = std::unique_ptr<ast::expression>(index); }
+
+    const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
+    const std::string to_string() const noexcept override {
+        std::string buf;
+        buf += "(";
+        buf += _left->to_string();
+        buf += "[";
+        buf += _index->to_string();
+        buf += "])";
+        return buf;
+    }
+
+protected: 
+    token::token                        _token; // the '[ token
+    std::unique_ptr<ast::expression>    _left;
+    std::unique_ptr<ast::expression>    _index;
+};
+
 } // namespace ast
+
+
 

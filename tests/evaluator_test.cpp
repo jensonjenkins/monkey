@@ -2,6 +2,7 @@
 #include "../src/object.hpp"
 #include "../src/parser.hpp"
 #include <cstdlib>
+#include <optional>
 
 namespace evaluator {
 
@@ -309,13 +310,51 @@ void test_builtin_function_errors() {
       {R"(len("one", "two"))", "wrong number of arguments. got=2, want=1"},
   };
   for (int i = 0; i < tc.size(); i++) {
-    object::object *evaluated =const_cast<object::object *>(test_eval(tc[i].input));
-    object::error *eo = try_cast<object::error *>(evaluated, "test_error_handling - not an error obj.");
+    object::object* evaluated = const_cast<object::object*>(test_eval(tc[i].input));
+    object::error* eo = try_cast<object::error*>(evaluated, "test_error_handling - not an error obj.");
     assert_value(eo->inspect(), tc[i].expected, "test_error_handling - error message");
   }
   std::cout << "14 - ok: builtin function errors." << std::endl;
 }
 
+void test_array_literal() {
+  const char* input = "[1, 2 * 2, 3 + 3]";
+  object::object* evaluated = const_cast<object::object *>(test_eval(input));
+  object::array* array = try_cast<object::array*>(evaluated, "test_array_lit - not an array obj.");
+  assert_value(array->elements().size(), 3, "test_array_lit - array size");
+
+  test_integer_object(array->elements()[0].get(), 1);
+  test_integer_object(array->elements()[1].get(), 4);
+  test_integer_object(array->elements()[2].get(), 6);
+
+  std::cout << "15 - ok: array literals." << std::endl;
+}
+
+void test_array_index_expression() {
+  using test_case = test_case_base<std::optional<std::int64_t>>;
+  std::vector<test_case> tc{
+      {"[1, 2, 3][0]", 1},
+      {"[1, 2, 3][1]", 2},
+      {"[1, 2, 3][2]", 3},
+      {"let i = 0; [1][i];", 1},
+      {"[1, 2, 3][1 + 1];", 3},
+      {"let a = [1, 2, 3]; a[1 + 1];", 3},
+      {"let a = [1, 2, 3]; a[0] + a[1] + a[2];", 6},
+      {"let a = [1, 2, 3]; let i = a[0]; a[i];", 2},
+      {"[1, 2, 3][-1]", std::nullopt},
+      {"[1, 2, 3][3]", std::nullopt},
+  };
+  
+  for (int i = 0; i < tc.size(); i++) {
+    const object::object *evaluated = test_eval(tc[i].input);
+    if (tc[i].expected) {
+      test_integer_object(evaluated, tc[i].expected.value());
+    } else {
+      test_null_object(evaluated);
+    }
+  }
+  std::cout << "16 - ok: array index expressions." << std::endl; 
+}
 
 } // namespace evaluator
 
@@ -339,6 +378,8 @@ int main() {
   evaluator::test_string_concatenation();
   evaluator::test_builtin_functions();
   evaluator::test_builtin_function_errors();
+  evaluator::test_array_literal();
+  evaluator::test_array_index_expression();
 
   exit(EXIT_SUCCESS);
 }

@@ -21,6 +21,7 @@ constexpr precedence SUM            = 3; // +
 constexpr precedence PRODUCT        = 4; // *
 constexpr precedence PREFIX         = 5; // -var or !var
 constexpr precedence CALL           = 6; // my_fn(var)
+constexpr precedence INDEX          = 7; // array[index]
 
 const std::unordered_map<token::token_t, precedence> precedences {
     {token::EQ,         EQUALS},
@@ -32,6 +33,7 @@ const std::unordered_map<token::token_t, precedence> precedences {
     {token::SLASH,      PRODUCT},
     {token::ASTERISK,   PRODUCT},
     {token::LPAREN,     CALL},
+    {token::LBRACKET,   INDEX},
 };
 
 class parser {
@@ -61,6 +63,7 @@ public:
         register_prefix_fn(token::IF,       [this]() -> ast::expression* { return this->parse_if_expression(); });
         register_prefix_fn(token::FUNCTION, [this]() -> ast::expression* { return this->parse_function_literal(); });
         register_prefix_fn(token::STRING,   [this]() -> ast::expression* { return this->parse_string_literal(); });
+        register_prefix_fn(token::LBRACKET, [this]() -> ast::expression* { return this->parse_array_literal(); });
 
         register_infix_fn(token::PLUS,      [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::MINUS,     [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
@@ -71,6 +74,7 @@ public:
         register_infix_fn(token::LT,        [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::GT,        [this](ast::expression* a) -> ast::expression* { return this->parse_infix_expr(a); });
         register_infix_fn(token::LPAREN,    [this](ast::expression* a) -> ast::expression* { return this->parse_call_expr(a); });
+        register_infix_fn(token::LBRACKET,  [this](ast::expression* a) -> ast::expression* { return this->parse_index_expr(a); });
     }
 
     /**
@@ -175,6 +179,44 @@ public:
         return left_expr;
     }
 
+    ast::expression* parse_index_expr(ast::expression* left) noexcept {
+        trace t("parse_index_expr: " + std::string(_cur_token.token_literal()));
+        ast::index_expression* expr = new ast::index_expression(_cur_token, left);
+
+        next_token();
+        expr->set_index(parse_expr(LOWEST));
+
+        if(!expect_peek(token::RBRACKET)) {
+            return nullptr;
+        }
+
+        return expr;
+    }
+
+    std::vector<ast::expression*> parse_expr_list(token::token_t end) noexcept {
+        trace t("parse_expr_list: " + std::string(_cur_token.token_literal()));
+        std::vector<ast::expression*> list;
+        if(peek_token_is(end)) {
+            next_token();
+            return list;
+        }
+
+        next_token();
+        list.push_back(parse_expr(LOWEST));
+
+        while(peek_token_is(token::COMMA)) {
+            next_token();
+            next_token();
+            list.push_back(parse_expr(LOWEST));
+        }
+
+        if(!expect_peek(end)) {
+            return std::vector<ast::expression*> { nullptr };
+        }
+
+        return list;
+    }
+
     ast::expression* parse_identifier() const noexcept {
         trace t("parse_ident: " + std::string(_cur_token.token_literal()));
         ast::expression* ident = new ast::identifier(_cur_token, _cur_token.token_literal());
@@ -198,6 +240,13 @@ public:
         trace t("parse_str_literal: " + std::string(_cur_token.token_literal()));
         ast::expression* string_lit = new ast::string_literal(_cur_token, _cur_token.token_literal());
         return string_lit;
+    }
+
+    ast::expression* parse_array_literal() noexcept {
+        trace t("parse_array_literal: " + std::string(_cur_token.token_literal()));
+        ast::array_literal* array = new ast::array_literal(_cur_token);
+        array->set_elements(parse_expr_list(token::RBRACKET));
+        return array;
     }
 
     ast::expression* parse_prefix_expr() noexcept {
@@ -373,34 +422,8 @@ public:
     ast::expression* parse_call_expr(ast::expression* function) noexcept {
         trace t("parse_call_expr: " + std::string(_cur_token.token_literal()));
         ast::call_expression* expr = new ast::call_expression(_cur_token, function);
-        expr->set_arguments(parse_call_args());
+        expr->set_arguments(parse_expr_list(token::RPAREN));
         return expr;
-    }
-
-    std::vector<ast::expression*> parse_call_args() noexcept {
-        trace t("parse_call_args: " + std::string(_cur_token.token_literal()));
-        std::vector<ast::expression*> args;
-
-        if(peek_token_is(token::RPAREN)){
-            next_token();
-            return args;
-        }
-
-        next_token();
-        args.push_back(parse_expr(LOWEST));
-
-        while(peek_token_is(token::COMMA)) {
-            next_token();
-            next_token();
-            args.push_back(parse_expr(LOWEST));
-        }
-
-        if(!expect_peek(token::RPAREN)) {
-            std::vector<ast::expression*> nil;
-            return nil;
-        }
-
-        return args;
     }
 
 protected:

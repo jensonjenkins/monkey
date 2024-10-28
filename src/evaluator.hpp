@@ -232,6 +232,24 @@ static object::object* apply_function(object::object* fn, std::vector<object::ob
     return new object::error("not a function: " + std::string(fn->type()));
 }
 
+static object::object* eval_array_index_expression(object::object* array, object::object* index) noexcept {
+    parser::trace t("eval_array_index_expr method: " + array->inspect() + " " + index->inspect());
+    object::array* array_obj = dynamic_cast<object::array*>(array);
+    std::int64_t idx = dynamic_cast<object::integer*>(index)->value();
+    if (idx < 0 || idx > array_obj->elements().size() - 1) {
+        return NULL_O;
+    }
+    return array_obj->elements()[idx].get();
+}
+
+static object::object* eval_index_expression(object::object* left, object::object* index) noexcept {
+    parser::trace t("eval_index_expr method: " + left->inspect() + " " + index->inspect());
+    if(left->type() == object::ARRAY_OBJ && index->type() == object::INTEGER_OBJ) {
+        return eval_array_index_expression(left, index);
+    }
+    return new object::error("index operator not supported: " + std::string(left->type()) + " " + std::string(index->type()));
+}
+
 static object::object* eval(ast::node* node, object::scope* scope) {
     parser::trace t("eval");
 
@@ -315,12 +333,32 @@ static object::object* eval(ast::node* node, object::scope* scope) {
         return eval_if_expression(n, scope);
     }
     if (auto* n = dynamic_cast<ast::int_literal*>(node)) {
-        parser::trace t("eval_int_literal: " + std::to_string(n->value()));
+        parser::trace t("eval_int_lit: " + std::to_string(n->value()));
         return new object::integer(n->value());
     }
     if (auto* n = dynamic_cast<ast::boolean*>(node)) {
         parser::trace t("eval_boolean");
         return n->value() ? TRUE_O : FALSE_O;
+    }
+    if (auto* n = dynamic_cast<ast::array_literal*>(node)) {
+        parser::trace t("eval_array_lit");
+        std::vector<object::object*> elements = eval_expressions(n->elements(), scope);
+        if(elements.size() == 1 && is_error(elements[0])) {
+            return elements[0];
+        }
+        return new object::array(elements);
+    }
+    if (auto* n = dynamic_cast<ast::index_expression*>(node)) {
+        parser::trace t("eval_index_expr");
+        object::object* left = eval(n->left(), scope);
+        if (is_error(left)){
+            return left;
+        }
+        object::object* index = eval(n->index(), scope);
+        if (is_error(index)){
+            return index;
+        }
+        return eval_index_expression(left, index);
     }
 
     return nullptr;
