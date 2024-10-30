@@ -16,7 +16,7 @@ bool check_parser_errors(parser::parser p) {
     return false;
 }
 
-bool    parser::trace::_enable_trace = 0;
+bool    parser::trace::_enable_trace = 1;
 size_t  parser::trace::_indent_level = 0;
 
 int main() {
@@ -31,11 +31,10 @@ int main() {
 
         lexer::lexer l(input);
         parser::parser p(l);
-        ast::program* program = p.parse_program();
+        std::shared_ptr<const ast::program> program (p.parse_program());
         if(!check_parser_errors(p)) {
             continue;
         }
-
         object::object* evaluated = evaluator::eval(program, scope);
         if(evaluated != nullptr){
             std::cout<<evaluated->inspect()<<std::endl;

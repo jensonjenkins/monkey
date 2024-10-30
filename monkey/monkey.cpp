@@ -33,7 +33,7 @@ int main() {
 
     lexer::lexer l(cstr_input);
     parser::parser p(l);
-    ast::program* program = p.parse_program();
+    std::shared_ptr<const ast::program> program(p.parse_program());
     if(!check_parser_errors(p)) {
         exit(EXIT_FAILURE);
     }
