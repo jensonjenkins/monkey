@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <type_traits>
 
 #include "../src/parser.hpp"
@@ -35,8 +36,8 @@ struct let_stmt_test_case {
 };
 
 template <typename To, typename From>
-To try_cast(From from, std::string err_msg) {
-    To casted = dynamic_cast<To>(from);
+std::shared_ptr<To> try_cast(From from, std::string err_msg) {
+    std::shared_ptr<To> casted = std::dynamic_pointer_cast<To>(from);
     if(casted == nullptr){
         std::cout<<"fail: "<<err_msg<<std::endl;
         exit(EXIT_FAILURE);
@@ -62,26 +63,26 @@ void check_parser_errors(parser p) {
     exit(EXIT_FAILURE);
 }
 
-void test_integer_literal(ast::expression* il, std::int64_t value) {
-    ast::int_literal* int_lit = try_cast<ast::int_literal*>(il, "test_int_lit - expr not an int lit.");
+void test_integer_literal(std::shared_ptr<const ast::expression> il, std::int64_t value) {
+    auto int_lit = try_cast<const ast::int_literal>(il, "test_int_lit - expr not an int lit.");
     assert_value(int_lit->value(), value, "test_int_lit - int lit values");
     assert_value(int_lit->token_literal(), std::to_string(value), "test_int_lit - int_lit token_literal");
 }
 
-void test_identifier(ast::expression* expr, const std::string& value) {
-    ast::identifier* ident = try_cast<ast::identifier*>(expr, "test_ident - expr not an ident.");
+void test_identifier(std::shared_ptr<const ast::expression> expr, const std::string& value) {
+    auto ident = try_cast<const ast::identifier>(expr, "test_ident - expr not an ident.");
     assert_value(ident->value(), std::string_view(value), "test_ident - ident value");
     assert_value(ident->token_literal(), value, "test_ident - ident token_literal()");
 }
 
-void test_boolean_literal(ast::expression* expr, bool value) {
-    ast::boolean* b = try_cast<ast::boolean*>(expr, "test_bool_lit - expr not a bool.");
+void test_boolean_literal(std::shared_ptr<const ast::expression> expr, bool value) {
+    auto b = try_cast<const ast::boolean>(expr, "test_bool_lit - expr not a bool.");
     assert_value(b->value(), value, "test_bool_lit - bool value");
     assert_value(b->token_literal() == "true", value, "test_bool_lit - bool token_literal()");
 }
 
 template <typename T>
-void test_literal_expression(ast::expression* expr, T v) {
+void test_literal_expression(std::shared_ptr<const ast::expression> expr, T v) {
     if constexpr(std::is_same_v<T, int> || std::is_same_v<T, std::int64_t>) {
         return test_integer_literal(expr, v);
     } else if constexpr (std::is_same_v<T, std::string>) {
@@ -94,15 +95,15 @@ void test_literal_expression(ast::expression* expr, T v) {
 }
 
 template <typename L, typename R>
-void test_infix_expression(ast::expression* expr, L left, std::string op, R right) {
-    ast::infix_expression* ie = try_cast<ast::infix_expression*>(expr, "test_infix_expr - expr not an infix expr.");
+void test_infix_expression(std::shared_ptr<const ast::expression> expr, L left, std::string op, R right) {
+    auto ie = try_cast<const ast::infix_expression>(expr, "test_infix_expr - expr not an infix expr.");
     test_literal_expression(ie->l_expr(), left);
     assert_value(ie->op(), op, "test_infix_expr - op");
     test_literal_expression(ie->r_expr(), right);
 }
 
-ast::let_statement* test_let_statement_helper(ast::statement* s, const char* name) {
-    ast::let_statement* ls = try_cast<ast::let_statement*>(s, "test_let_stmt - s is not a let_statement");
+std::shared_ptr<const ast::let_statement> test_let_statement_helper(std::shared_ptr<const ast::statement> s, const char* name) {
+    auto ls = try_cast<const ast::let_statement>(s, "test_let_stmt - s is not a let_statement");
     assert_value(s->token_literal(), "let", "test_let_stmt - statement token_literal");
     assert_value(ls->ident().token_literal(), name, "test_let_stmt - stmt ident token_literal");
     assert_value(ls->ident().value(), name, "test_let_stmt - stmt ident value");
@@ -121,9 +122,8 @@ void test_let_statement_template(const let_stmt_test_case<T>& tc) {
     }
     assert_value(program->statements().size(), 1, "test_let_stmt - program statements");
         
-    ast::statement* stmt = program->statements()[0].get();
-    ast::let_statement* ls = test_let_statement_helper(stmt, tc.expected_ident); 
-    ast::expression* val = ls->value();
+    std::shared_ptr<const ast::let_statement> ls = test_let_statement_helper(program->statements()[0], tc.expected_ident); 
+    std::shared_ptr<const ast::expression> val = ls->value();
 
     test_literal_expression(val, tc.expected_value);
     
@@ -150,8 +150,8 @@ void test_return_statement() {
     assert_value(program->statements().size(), 3, "test_return_stmt - program stmt size");
  
     for(int i=0;i<3;i++){
-        ast::statement* s = program->statements()[i].get();
-        ast::return_statement* rs = try_cast<ast::return_statement*>(s, "test_return_stmt - stmt is not a return stmt.");
+        auto rs = try_cast<const ast::return_statement>(
+                program->statements()[i], "test_return_stmt - stmt is not a return stmt.");
         assert_value(rs->token_literal(), "return", "test_return_stmt - stmt token_literal");
     }
 
@@ -167,10 +167,10 @@ void test_identifier_expression() {
     
     assert_value(program->statements().size(), 1, "test_ident_expr - program stmt size"); 
 
-    ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_ident_expr - s not expr stmt");
+    auto es = try_cast<const ast::expression_statement>(
+            program->statements()[0], "test_ident_expr - s not expr stmt");
 
-    ast::expression* e = es->expr();
+    std::shared_ptr<const ast::expression> e = es->expr();
     test_identifier(e, "foobar");
 
     std::cout<<"3 - ok: parse expression statement with identifier."<<std::endl;
@@ -185,10 +185,10 @@ void test_integer_literal_expression() {
     
     assert_value(program->statements().size(), 1, "test_int_lit_expr - program stmt size"); 
     
-    ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_int_lit_expr - s not expr stmt.");
+    auto es = try_cast<const ast::expression_statement>(
+        program->statements()[0], "test_int_lit_expr - s not expr stmt.");
 
-    ast::expression* e = es->expr();
+    std::shared_ptr<const ast::expression> e = es->expr();
     test_integer_literal(e, 5);
 
     std::cout<<"4 - ok: parse integer literal rvalue."<<std::endl;
@@ -210,11 +210,11 @@ void test_parse_prefix_expression_1() {
 
         assert_value(program->statements().size(), 1, "test_parse_prefix_1 - program stmt size"); 
 
-        ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_prefix_1 - s not expr stmt.");
+        auto es = try_cast<const ast::expression_statement>(
+                program->statements()[0], "test_parse_prefix_1 - s not expr stmt.");
 
-        ast::expression* e = es->expr();
-        ast::prefix_expression* pf= try_cast<ast::prefix_expression*>(e, "test_parse_prefix_1 - expr not a prefix expr.");
+        std::shared_ptr<const ast::expression> e = es->expr();
+        auto pf = try_cast<const ast::prefix_expression>(e, "test_parse_prefix_1 - expr not a prefix expr.");
         
         assert_value(pf->op(), tc.op, "test_parse_prefix_1 - op");
         test_literal_expression(pf->expr(), tc.value);
@@ -238,11 +238,11 @@ void test_parse_prefix_expression_2() {
 
         assert_value(program->statements().size(), 1, "test_parse_prefix_2 - program stmt size"); 
 
-        ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_prefix_2 - s not expr stmt.");
+        auto es = try_cast<const ast::expression_statement>(
+                program->statements()[0], "test_parse_prefix_2 - s not expr stmt.");
 
-        ast::expression* e = es->expr();
-        ast::prefix_expression* pf= try_cast<ast::prefix_expression*>(e, "test_parse_prefix_2 - expr not a prefix expr.");
+        std::shared_ptr<const ast::expression> e = es->expr();
+        auto pf= try_cast<const ast::prefix_expression>(e, "test_parse_prefix_2 - expr not a prefix expr.");
         
         assert_value(pf->op(), tc.op, "test_parse_prefix_2 - op");
         test_literal_expression(pf->expr(), tc.value);
@@ -272,10 +272,10 @@ void test_parse_infix_expression_1() {
 
         assert_value(program->statements().size(), 1, "test_parse_infix_1 - program stmt size"); 
 
-        ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_infix_1 - s not expr stmt.");
+        auto es = try_cast<const ast::expression_statement>(
+                program->statements()[0], "test_parse_infix_1 - s not expr stmt.");
 
-        ast::expression* e = es->expr();
+        std::shared_ptr<const ast::expression> e = es->expr();
         test_infix_expression(e, tc.left_value, tc.op, tc.right_value);
     }
 
@@ -299,10 +299,10 @@ void test_parse_infix_expression_2() {
 
         assert_value(program->statements().size(), 1, "test_parse_infix_2 - program stmt size"); 
 
-        ast::statement* s = program->statements()[0].get();
-        ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_parse_infix_2 - s not expr stmt.");
+        auto es = try_cast<const ast::expression_statement>(
+                program->statements()[0], "test_parse_infix_2 - s not expr stmt.");
 
-        ast::expression* e = es->expr();
+        std::shared_ptr<const ast::expression> e = es->expr();
         test_infix_expression(e, tc.left_value, tc.op, tc.right_value);
     }
 
@@ -365,11 +365,10 @@ void test_boolean_expression() {
  
     assert_value(program->statements().size(), 1, "test_bool_expr - program stmt size"); 
     
-    ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_bool_expr - s not expr stmt.");
+    auto es = try_cast<const ast::expression_statement>(program->statements()[0], "test_bool_expr - s not expr stmt.");
 
-    ast::expression* e = es->expr();
-    ast::boolean* b = try_cast<ast::boolean*>(e, "test_bool_expr - expr not a boolean.");
+    std::shared_ptr<const ast::expression> e = es->expr();
+    auto b = try_cast<const ast::boolean>(e, "test_bool_expr - expr not a boolean.");
     assert_value(b->value(), true, "test_ident - bool value");
     assert_value(b->token_literal(), "true", "test_ident - bool token_literal");
 
@@ -386,16 +385,15 @@ void test_if_expression() {
     
     assert_value(program->statements().size(), 1, "test_if_expr - program stmt size"); 
     
-    ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_if_expr - s not expr stmt.");
+    auto es = try_cast<const ast::expression_statement>(program->statements()[0], "test_if_expr - s not expr stmt.");
 
-    ast::expression* e = es->expr();
-    ast::if_expression* ie = try_cast<ast::if_expression*>(e, "test_if_expression - e not an if expr");
+    std::shared_ptr<const ast::expression> e = es->expr();
+    auto ie = try_cast<const ast::if_expression>(e, "test_if_expression - e not an if expr");
     test_infix_expression(ie->condition(), lv, op, rv);
 
     assert_value(ie->consequence()->statements().size(), 1, "test_if_expr - consequence stmt size");
-    ast::expression_statement* c = try_cast<ast::expression_statement*>(
-            ie->consequence()->statements()[0].get(), "test_if_expression - consequence is not an expr stmt");
+    auto c = try_cast<const ast::expression_statement>(
+            ie->consequence()->statements()[0], "test_if_expression - consequence is not an expr stmt");
     test_identifier(c->expr(), "x");
 
     assert_value(ie->alternative(), nullptr, "test_if_expr - alternative");
@@ -413,21 +411,20 @@ void test_if_else_expression() {
     
     assert_value(program->statements().size(), 1, "test_if_expr - program stmt size"); 
     
-    ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, "test_if_expr - s not expr stmt.");
+    auto es = try_cast<const ast::expression_statement>(program->statements()[0], "test_if_expr - s not expr stmt.");
 
-    ast::expression* e = es->expr();
-    ast::if_expression* ie = try_cast<ast::if_expression*>(e, "test_if_expression - e not an if expr");
+    std::shared_ptr<const ast::expression> e = es->expr();
+    auto ie = try_cast<const ast::if_expression>(e, "test_if_expression - e not an if expr");
     test_infix_expression(ie->condition(), lv, op, rv);
 
     assert_value(ie->consequence()->statements().size(), 1, "test_if_expr - consequence stmt size");
-    ast::expression_statement* c = try_cast<ast::expression_statement*>(
-            ie->consequence()->statements()[0].get(), "test_if_expression - consequence is not an expr stmt");
+    auto c = try_cast<const ast::expression_statement>(
+            ie->consequence()->statements()[0], "test_if_expression - consequence is not an expr stmt");
     test_identifier(c->expr(), "x");
     
     assert_value(ie->alternative()->statements().size(), 1, "test_if_expr - alternative statements size");
-    ast::expression_statement* a = try_cast<ast::expression_statement*>(
-            ie->alternative()->statements()[0].get(), "test_if_expr - alternative is not an expr stmt.");
+    auto a = try_cast<const ast::expression_statement>(
+            ie->alternative()->statements()[0], "test_if_expr - alternative is not an expr stmt.");
     test_identifier(a->expr(), "y");
 
 
@@ -447,21 +444,19 @@ void test_parse_function_literal() {
     
     assert_value(program->statements().size(), 1, "test_fn_lit - statements.size() dont match.");
     
-    ast::statement* s = program->statements()[0].get();
-    ast::expression_statement* es = try_cast<ast::expression_statement*>(s, 
-            "test_fn_lit - statement not an expr statment.");
+    auto es = try_cast<const ast::expression_statement>(
+            program->statements()[0], "test_fn_lit - statement not an expr statment.");
 
-    ast::expression* e = es->expr();
-    ast::function_literal* fl = try_cast<ast::function_literal*>(e, 
-            "test_function_literal - expr not a function literal.");
+    std::shared_ptr<const ast::expression> e = es->expr();
+    auto fl = try_cast<const ast::function_literal>(e, "test_function_literal - expr not a function literal.");
     assert_value(fl->parameters().size(), 2, "test_fn_lit - parameters.size() dont match.");
 
-    test_literal_expression(fl->parameters()[0].get(), lv);
-    test_literal_expression(fl->parameters()[1].get(), rv);
+    test_literal_expression(fl->parameters()[0], lv);
+    test_literal_expression(fl->parameters()[1], rv);
 
     assert_value(fl->body()->statements().size(), 1, "test_fn_lit - body statements size() dont match.");
 
-    ast::expression_statement* stmt = try_cast<ast::expression_statement*>(fl->body()->statements()[0].get(), 
+    auto stmt = try_cast<const ast::expression_statement>(fl->body()->statements()[0],
             "test_function_literal - body statement not expression statement.");
 
     test_infix_expression(stmt->expr(), lv, op, rv);
@@ -487,14 +482,13 @@ void test_parse_function_parameter() {
         ast::program* program = p.parse_program();
         check_parser_errors(p);
 
-        ast::expression_statement* stmt = try_cast<ast::expression_statement*>(
-                program->statements()[0].get(), "test_parse_fn_param - stmt not an expr stmt.");
-        ast::function_literal* fn = try_cast<ast::function_literal*>(
-                stmt->expr(), "test_parse_fn_param - expr stmt not a fn literal.");
+        auto stmt = try_cast<const ast::expression_statement>(
+                program->statements()[0], "test_parse_fn_param - stmt not an expr stmt.");
+        auto fn = try_cast<const ast::function_literal>(stmt->expr(), "test_parse_fn_param - expr stmt not a fn literal.");
 
         assert_value(fn->parameters().size(), tc.expected.size(), "test_parse_fn_param - parameter count");
         for(int j=0;j<tc.expected.size();j++) {
-            test_literal_expression(fn->parameters()[j].get(), tc.expected[j]);
+            test_literal_expression(fn->parameters()[j], tc.expected[j]);
         }
     }
     std::cout<<"11 - ok: parse function parameters."<<std::endl;
@@ -509,17 +503,16 @@ void test_parse_call_expression() {
 
     assert_value(program->statements().size(), 1, "test_parse_call_expr - program statements size");
 
-    ast::expression_statement* e = try_cast<ast::expression_statement*>(
-            program->statements()[0].get(), "test_parse_call_expr - statement not an expr stmt.");
-    ast::call_expression* call = try_cast<ast::call_expression*>(
-            e->expr(), "test_parse_call_expr - expr stmt not an call expr.");
+    auto e = try_cast<const ast::expression_statement>(
+            program->statements()[0], "test_parse_call_expr - statement not an expr stmt.");
+    auto call = try_cast<const ast::call_expression>(e->expr(), "test_parse_call_expr - expr stmt not an call expr.");
 
     test_identifier(call->function(), "add");
     assert_value(call->arguments().size(), 3, "test_parse_call_expr - number of call expr arguments");
     
-    test_literal_expression(call->arguments()[0].get(), 1);
-    test_infix_expression(call->arguments()[1].get(), 2, "*", 3);
-    test_infix_expression(call->arguments()[2].get(), 4, "+", 5);
+    test_literal_expression(call->arguments()[0], 1);
+    test_infix_expression(call->arguments()[1], 2, "*", 3);
+    test_infix_expression(call->arguments()[2], 4, "+", 5);
 
     std::cout<<"12 - ok: parse function call expression."<<std::endl;
 }
@@ -534,9 +527,9 @@ void test_string_literal_expression() {
     check_parser_errors(p);
 
     assert_value(program->statements().size(), 1, "test_str_lit_expr - program statements size");
-    ast::expression_statement* e = try_cast<ast::expression_statement*>(
-            program->statements()[0].get(), "test_str_lit_expr - statement not an expr stmt.");
-    ast::string_literal* lit = try_cast<ast::string_literal*>(e->expr(), "test_str_lit_expr - statement not a string literal.");
+    auto e = try_cast<const ast::expression_statement>(
+            program->statements()[0], "test_str_lit_expr - statement not an expr stmt.");
+    auto lit = try_cast<const ast::string_literal>(e->expr(), "test_str_lit_expr - statement not a string literal.");
     assert_value(lit->value(), "hello world", "test_str_lit_expr - string literal value");
 
     std::cout<<"13 - ok: parse string literals."<<std::endl;
@@ -550,14 +543,14 @@ void test_parse_array_literal() {
     check_parser_errors(p);
 
     assert_value(program->statements().size(), 1, "test_parse_array_lit - program statements size");
-    ast::expression_statement* e = try_cast<ast::expression_statement*>(
-            program->statements()[0].get(), "test_parse_array_lit - statement not an expr stmt.");
-    ast::array_literal* array = try_cast<ast::array_literal*>(e->expr(), "test_parse_array_lit - statement not an array literal.");
+    auto e = try_cast<const ast::expression_statement>(
+            program->statements()[0], "test_parse_array_lit - statement not an expr stmt.");
+    auto array = try_cast<const ast::array_literal>(e->expr(), "test_parse_array_lit - statement not an array literal.");
     assert_value(array->elements().size(), 3, "test_parse_array_lit - array literal size");
 
-    test_integer_literal(array->elements()[0].get(), 1);
-    test_infix_expression(array->elements()[1].get(), 2, "*", 2);
-    test_infix_expression(array->elements()[2].get(), 3, "+", 3);
+    test_integer_literal(array->elements()[0], 1);
+    test_infix_expression(array->elements()[1], 2, "*", 2);
+    test_infix_expression(array->elements()[2], 3, "+", 3);
 
     std::cout<<"14 - ok: parse array literal."<<std::endl;
 }
@@ -570,9 +563,9 @@ void test_parse_index_expression() {
     check_parser_errors(p);
 
     assert_value(program->statements().size(), 1, "test_parse_index_expr - program statements size");
-    ast::expression_statement* e = try_cast<ast::expression_statement*>(
-            program->statements()[0].get(), "test_parse_index_expr - statement not an expr stmt.");
-    ast::index_expression* index_expr = try_cast<ast::index_expression*>(e->expr(), "test_parse_index_expr - statement not an index expr.");
+    auto e = try_cast<const ast::expression_statement>(
+            program->statements()[0], "test_parse_index_expr - statement not an expr stmt.");
+    auto index_expr = try_cast<const ast::index_expression>(e->expr(), "test_parse_index_expr - statement not an index expr.");
 
     test_identifier(index_expr->left(), "my_array");
     test_infix_expression(index_expr->index(), 1, "+", 1);

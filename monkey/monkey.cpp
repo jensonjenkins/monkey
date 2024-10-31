@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <chrono>
 
 bool check_parser_errors(parser::parser p) {
     std::vector<std::string> errors = p.errors();
@@ -23,6 +24,8 @@ size_t  parser::trace::_indent_level = 0;
 int main() {
     std::string input;
     std::ostringstream oss;
+
+    auto s = std::chrono::high_resolution_clock::now();
 
     while (std::getline(std::cin, input)) {
         oss << input << "\n"; 
@@ -43,6 +46,13 @@ int main() {
     if(evaluated != nullptr){
         std::cout<<evaluated->inspect()<<std::endl;
     }
-    
+
+    auto e = std::chrono::high_resolution_clock::now();
+    std::cout
+        << "time: "
+        << std::chrono::duration_cast<std::chrono::microseconds>(e - s).count()
+        << " micro s"
+        << std::endl;
+ 
     return 0;
 }

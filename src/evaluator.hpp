@@ -12,7 +12,8 @@ inline object::null* NULL_O = new object::null;
 inline object::boolean* TRUE_O = new object::boolean(true);
 inline object::boolean* FALSE_O = new object::boolean(false);
 
-static object::object* eval(std::shared_ptr<const ast::node> node, object::scope* scope); // forward declaration to avoid compiler complaints
+// forward declaration to avoid compiler complaints
+static object::object* eval(std::shared_ptr<const ast::node> node, object::scope* scope); 
 
 inline static bool is_error(object::object* obj) noexcept {
     if (obj != nullptr) {
@@ -177,7 +178,7 @@ static object::object* eval_block_statement(std::shared_ptr<const ast::block_sta
 
 static object::object* eval_identifier(std::shared_ptr<const ast::identifier> ident, object::scope* scope) {
     parser::trace t("eval_identifier: " + ident->to_string());
-    if(object::object* res = scope->get(ident->value())) {
+    if(object::object* res = scope->get(std::string(ident->value()))) {
         return res;
     }
     if(object::object* builtin_fn = get_builtin(ident->value())) {
@@ -213,7 +214,7 @@ static object::scope* extend_fn_scope(object::function* fn, std::vector<object::
     parser::trace t("extend current fn scope: " + fn->get_scope()->list_scope()); 
     object::scope* extended_scope = new object::scope(fn->get_scope());
     for (int i = 0; i < fn->parameters().size(); i++) {
-        extended_scope->set(fn->parameters()[i]->value(), args[i]);
+        extended_scope->set(std::string(fn->parameters()[i]->value()), args[i]);
     }
     return extended_scope;
 }
@@ -270,7 +271,7 @@ static object::object* eval(std::shared_ptr<const ast::node> node, object::scope
         return eval_identifier(n, scope);
     }
     if (auto n = std::dynamic_pointer_cast<const ast::string_literal>(node)) {
-        parser::trace t("eval_ident_expr");
+        parser::trace t("eval_string_lit");
         return new object::string(n->value());
     }
     if (auto n = std::dynamic_pointer_cast<const ast::let_statement>(node)) {
@@ -279,7 +280,7 @@ static object::object* eval(std::shared_ptr<const ast::node> node, object::scope
         if (is_error(val)) {
             return val;
         }
-        scope->set(n->ident().value(), val);
+        scope->set(std::string(n->ident().value()), val);
     }
     if (auto n = std::dynamic_pointer_cast<const ast::prefix_expression>(node)) {
         parser::trace t("eval_prefix_expr");
@@ -315,7 +316,7 @@ static object::object* eval(std::shared_ptr<const ast::node> node, object::scope
     }
     if (auto n = std::dynamic_pointer_cast<const ast::function_literal>(node)) {
         parser::trace t("eval_fn_lit");
-        return new object::function(n->parameters(), n->body(), scope);
+        return new object::function(n->move_parameters(), n->body(), scope);
     }
     if (auto n = std::dynamic_pointer_cast<const ast::call_expression>(node)) {
         parser::trace t("eval_call_expr");

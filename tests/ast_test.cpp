@@ -13,7 +13,7 @@ void test_to_string() {
     ls->set_value(expr);
     p.add_statement(ls);
 
-    if(p.to_string() != "let my_var = another_var;\n"){
+    if(p.to_string() != "let my_var = another_var;"){
         std::cout<<"program to_string() wrong. got "<<p.to_string()<<std::endl;
         exit(EXIT_FAILURE);
     }

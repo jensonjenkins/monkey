@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <iostream>
 #include "token.hpp"
 
 namespace ast {
@@ -59,7 +58,7 @@ class identifier : public expression {
 public:
     identifier() noexcept = default;
     identifier(token::token token, std::string_view value) noexcept : _token(token), _value(std::string(value)) {}
-    ~identifier() { std::cout<<"ast::identifier deallocated."<<std::endl; }
+    ~identifier() noexcept = default;
     
     identifier(const identifier& other) noexcept = delete;
     identifier& operator=(const identifier& other) noexcept = delete;
@@ -79,8 +78,8 @@ class let_statement : public statement {
 public:
     let_statement(token::token token) noexcept : _token(token) {}
     let_statement(const let_statement& other) noexcept = delete;
-    ~let_statement() { std::cout<<"ast::let_statement deallocated."<<std::endl; }
     let_statement& operator=(const let_statement& other) noexcept = delete;
+    ~let_statement() noexcept = default;
 
     void move_ident(identifier&& ident) { _ident = std::move(ident); }
     void set_value(expression* expr) noexcept { _value = std::shared_ptr<expression>(expr); }
@@ -155,7 +154,7 @@ class int_literal : public expression {
 public:    
     int_literal() noexcept = default;
     int_literal(token::token token, std::int64_t value) noexcept : _token(token), _value(value) {}
-    ~int_literal() { std::cout<<"ast::int_literal deallocated."<<std::endl; }
+    ~int_literal() noexcept = default;
 
     int_literal(const int_literal& other) noexcept = delete;
     int_literal& operator=(const int_literal& other) noexcept = delete;
@@ -303,6 +302,7 @@ public:
     function_literal(token::token token) noexcept : _token(token) {};
     
     const std::vector<std::shared_ptr<identifier>>& parameters() const noexcept { return _parameters; }
+    std::vector<std::shared_ptr<identifier>> move_parameters() const noexcept { return std::move(_parameters); }
     std::shared_ptr<const block_statement> body() const noexcept { return _body; }
 
     void set_parameters(std::vector<identifier*> stmt) noexcept {
@@ -327,9 +327,12 @@ public:
     }
 
 protected:
-    token::token                                _token;
-    std::shared_ptr<block_statement>            _body;
-    std::vector<std::shared_ptr<identifier>>    _parameters;
+    token::token                                        _token;
+    std::shared_ptr<block_statement>                    _body;
+    mutable std::vector<std::shared_ptr<identifier>>    _parameters; // marked mutable to be moved to object::function
+                                                                     // so that when the ast::fn_literal object is
+                                                                     // deallocated, the identifiers don't get deallocated
+                                                                     // with it.
 };
 
 class call_expression : public expression {

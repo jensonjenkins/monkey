@@ -2,7 +2,6 @@
 #include "../src/object.hpp"
 #include "../src/evaluator.hpp"
 #include "../src/parser.hpp"
-#include <iostream>
 #include <cstdlib>
 #include <string>
 
@@ -16,7 +15,7 @@ bool check_parser_errors(parser::parser p) {
     return false;
 }
 
-bool    parser::trace::_enable_trace = 1;
+bool    parser::trace::_enable_trace = 0;
 size_t  parser::trace::_indent_level = 0;
 
 int main() {

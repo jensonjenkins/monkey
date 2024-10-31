@@ -1,0 +1,10 @@
+let counter = fn(x) {
+    if(x > 100) {
+        return x;
+    } else {
+        counter(x + 1);
+    }
+}
+
+counter(0);
+

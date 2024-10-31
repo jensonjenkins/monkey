@@ -1,12 +1,9 @@
-let a = 5;
-
 let counter = fn(x) {
-    if(x > 100) {
+    if(x > 500) {
         return x;
     } else {
         counter(x + 1);
     }
 }
 
-counter(a);
-
+counter(0);
