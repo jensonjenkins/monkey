@@ -4,6 +4,7 @@
 #include "trace.hpp"
 #include "object.hpp"
 #include "ast.hpp"
+#include <memory>
 
 namespace evaluator {
 
@@ -11,7 +12,8 @@ inline object::null* NULL_O = new object::null;
 inline object::boolean* TRUE_O = new object::boolean(true);
 inline object::boolean* FALSE_O = new object::boolean(false);
 
-static object::object* eval(ast::node* node, object::scope* scope); // forward declaration to avoid compiler complaints
+// forward declaration to avoid compiler complaints
+static object::object* eval(std::shared_ptr<const ast::node> node, object::scope* scope); 
 
 inline static bool is_error(object::object* obj) noexcept {
     if (obj != nullptr) {
@@ -20,12 +22,12 @@ inline static bool is_error(object::object* obj) noexcept {
     return false;
 }
 
-static object::object* eval_program (const std::vector<std::unique_ptr<ast::statement>>& stmts, object::scope* scope) {
+static object::object* eval_program (const std::vector<std::shared_ptr<ast::statement>>& stmts, object::scope* scope) {
     parser::trace t("eval_statements: " + std::to_string(stmts.size()) + " stmts.");
     object::object* result;
     
     for(const auto& stmt : stmts){
-        result = eval(stmt.get(), scope);
+        result = eval(stmt, scope);
 
         if(auto* rv = dynamic_cast<object::return_value*>(result)) {
             return rv->value();
@@ -141,7 +143,7 @@ static bool is_truthy(object::object* o) noexcept {
     }
 }
 
-static object::object* eval_if_expression(ast::if_expression* ie, object::scope* scope) noexcept {
+static object::object* eval_if_expression(std::shared_ptr<const ast::if_expression> ie, object::scope* scope) noexcept {
     parser::trace t("eval if expr: " + ie->to_string());
     object::object* condition = eval(ie->condition(), scope);
     if (is_error(condition)) {
@@ -156,13 +158,13 @@ static object::object* eval_if_expression(ast::if_expression* ie, object::scope*
     }
 }
 
-static object::object* eval_block_statement(ast::block_statement* block, object::scope* scope) noexcept {
+static object::object* eval_block_statement(std::shared_ptr<const ast::block_statement> block, object::scope* scope) noexcept {
     parser::trace t("eval block statement: " + block->to_string());
     object::object* result;
-    const std::vector<std::unique_ptr<ast::statement>>& stmts = block->statements();
+    const std::vector<std::shared_ptr<ast::statement>>& stmts = block->statements();
 
     for(const auto& stmt : stmts){
-        result = eval(stmt.get(), scope);
+        result = eval(stmt, scope);
         if (result != nullptr) {
             object::object_t rt = result->type();
             if (rt == object::RETURN_VALUE_OBJ || rt == object::ERROR_OBJ) {
@@ -174,9 +176,9 @@ static object::object* eval_block_statement(ast::block_statement* block, object:
     return result;
 }
 
-static object::object* eval_identifier(ast::identifier* ident, object::scope* scope) {
+static object::object* eval_identifier(std::shared_ptr<const ast::identifier> ident, object::scope* scope) {
     parser::trace t("eval_identifier: " + ident->to_string());
-    if(object::object* res = scope->get(ident->value())) {
+    if(object::object* res = scope->get(std::string(ident->value()))) {
         return res;
     }
     if(object::object* builtin_fn = get_builtin(ident->value())) {
@@ -185,13 +187,13 @@ static object::object* eval_identifier(ast::identifier* ident, object::scope* sc
     return new object::error("identifier not found: " + std::string(ident->value()));
 }
 
-static std::vector<object::object*> eval_expressions(const std::vector<std::unique_ptr<ast::expression>>& exps, 
+static std::vector<object::object*> eval_expressions(const std::vector<std::shared_ptr<ast::expression>>& exps, 
         object::scope* scope) noexcept {
     parser::trace t("eval_expressions");
     std::vector<object::object*> res;
 
     for (const auto& exp : exps) {
-        object::object* evaluated = eval(exp.get(), scope);
+        object::object* evaluated = eval(exp, scope);
         if (is_error(evaluated)) {
             return std::vector<object::object*> { evaluated };
         }
@@ -212,7 +214,7 @@ static object::scope* extend_fn_scope(object::function* fn, std::vector<object::
     parser::trace t("extend current fn scope: " + fn->get_scope()->list_scope()); 
     object::scope* extended_scope = new object::scope(fn->get_scope());
     for (int i = 0; i < fn->parameters().size(); i++) {
-        extended_scope->set(fn->parameters()[i]->value(), args[i]);
+        extended_scope->set(std::string(fn->parameters()[i]->value()), args[i]);
     }
     return extended_scope;
 }
@@ -250,37 +252,37 @@ static object::object* eval_index_expression(object::object* left, object::objec
     return new object::error("index operator not supported: " + std::string(left->type()) + " " + std::string(index->type()));
 }
 
-static object::object* eval(ast::node* node, object::scope* scope) {
+static object::object* eval(std::shared_ptr<const ast::node> node, object::scope* scope) {
     parser::trace t("eval");
 
     // Statements
-    if (auto* n = dynamic_cast<ast::program*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::program>(node)) {
         parser::trace t("eval_program");
         return eval_program(n->statements(), scope); 
     }
-    if (auto* n = dynamic_cast<ast::expression_statement*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::expression_statement>(node)) {
         parser::trace t("eval_expression_statement");
         return eval(n->expr(), scope);
     }
     
     // Expressions
-    if (auto* n = dynamic_cast<ast::identifier*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::identifier>(node)) {
         parser::trace t("eval_ident_expr");
         return eval_identifier(n, scope);
     }
-    if (auto* n = dynamic_cast<ast::string_literal*>(node)) {
-        parser::trace t("eval_ident_expr");
+    if (auto n = std::dynamic_pointer_cast<const ast::string_literal>(node)) {
+        parser::trace t("eval_string_lit");
         return new object::string(n->value());
     }
-    if (auto* n = dynamic_cast<ast::let_statement*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::let_statement>(node)) {
         parser::trace t("eval_let_stmt");
         object::object* val = eval(n->value(), scope);
         if (is_error(val)) {
             return val;
         }
-        scope->set(n->ident().value(), val);
+        scope->set(std::string(n->ident().value()), val);
     }
-    if (auto* n = dynamic_cast<ast::prefix_expression*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::prefix_expression>(node)) {
         parser::trace t("eval_prefix_expr");
         object::object* right = eval(n->expr(), scope);
         if (is_error(right)) {
@@ -288,7 +290,7 @@ static object::object* eval(ast::node* node, object::scope* scope) {
         }
         return eval_prefix_expression(n->op(), right);
     }
-    if (auto* n = dynamic_cast<ast::infix_expression*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::infix_expression>(node)) {
         parser::trace t("eval_infix_expr");
         object::object* left = eval(n->l_expr(), scope);
         if (is_error(left)) {
@@ -300,23 +302,23 @@ static object::object* eval(ast::node* node, object::scope* scope) {
         }
         return eval_infix_expression(left, n->op(), right);
     }
-    if (auto* n = dynamic_cast<ast::block_statement*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::block_statement>(node)) {
         parser::trace t("eval_block_stmt");
         return eval_block_statement(n, scope);
     }
-    if (auto* n = dynamic_cast<ast::return_statement*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::return_statement>(node)) {
         parser::trace t("eval_return_stmt");
         object::object* val = eval(n->return_value(), scope);
         if (is_error(val)) {
             return val;
         }
-        return new object::return_value(std::unique_ptr<object::object>(val));
+        return new object::return_value(std::shared_ptr<object::object>(val));
     }
-    if (auto* n = dynamic_cast<ast::function_literal*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::function_literal>(node)) {
         parser::trace t("eval_fn_lit");
-        return new object::function(n->parameters(), n->body(), scope);
+        return new object::function(n->move_parameters(), n->body(), scope);
     }
-    if (auto* n = dynamic_cast<ast::call_expression*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::call_expression>(node)) {
         parser::trace t("eval_call_expr");
         object::object* fn = eval(n->function(), scope);
         if (is_error(fn)) {
@@ -328,19 +330,19 @@ static object::object* eval(ast::node* node, object::scope* scope) {
         }
         return apply_function(fn, args);
     }
-    if (auto* n = dynamic_cast<ast::if_expression*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::if_expression>(node)) {
         parser::trace t("eval_if_expr");
         return eval_if_expression(n, scope);
     }
-    if (auto* n = dynamic_cast<ast::int_literal*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::int_literal>(node)) {
         parser::trace t("eval_int_lit: " + std::to_string(n->value()));
         return new object::integer(n->value());
     }
-    if (auto* n = dynamic_cast<ast::boolean*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::boolean>(node)) {
         parser::trace t("eval_boolean");
         return n->value() ? TRUE_O : FALSE_O;
     }
-    if (auto* n = dynamic_cast<ast::array_literal*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::array_literal>(node)) {
         parser::trace t("eval_array_lit");
         std::vector<object::object*> elements = eval_expressions(n->elements(), scope);
         if(elements.size() == 1 && is_error(elements[0])) {
@@ -348,7 +350,7 @@ static object::object* eval(ast::node* node, object::scope* scope) {
         }
         return new object::array(elements);
     }
-    if (auto* n = dynamic_cast<ast::index_expression*>(node)) {
+    if (auto n = std::dynamic_pointer_cast<const ast::index_expression>(node)) {
         parser::trace t("eval_index_expr");
         object::object* left = eval(n->left(), scope);
         if (is_error(left)){

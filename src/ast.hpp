@@ -34,31 +34,31 @@ public:
     const std::string to_string() const noexcept override {
         std::string buf;
         for(int i=0;i<_statements.size();i++){
-            ast::statement* stmt = _statements[i].get();
+            statement* stmt = _statements[i].get();
             buf += stmt->to_string();
         }
         return buf;
     }
     
-    const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { return _statements; }
-    std::vector<std::unique_ptr<ast::statement>> trf_statements() noexcept { return std::move(_statements); }
+    const std::vector<std::shared_ptr<statement>>& statements() const noexcept { return _statements; }
 
-    void add_statement(ast::statement* stmt) noexcept { 
-        _statements.push_back(std::unique_ptr<ast::statement>(stmt)); 
+    void add_statement(statement* stmt) noexcept { 
+        _statements.push_back(std::shared_ptr<statement>(stmt)); 
     }
-    void add_statement(std::unique_ptr<ast::statement>&& stmt) noexcept { _statements.push_back(std::move(stmt)); }
+    void add_statement(std::shared_ptr<statement>&& stmt) noexcept { _statements.push_back(std::move(stmt)); }
 
 protected: 
     /**
      * Rationale is that the program owns all its statements
      */
-    std::vector<std::unique_ptr<ast::statement>> _statements;
+    std::vector<std::shared_ptr<statement>> _statements;
 };
 
 class identifier : public expression {
 public:
     identifier() noexcept = default;
     identifier(token::token token, std::string_view value) noexcept : _token(token), _value(std::string(value)) {}
+    ~identifier() noexcept = default;
     
     identifier(const identifier& other) noexcept = delete;
     identifier& operator=(const identifier& other) noexcept = delete;
@@ -79,11 +79,12 @@ public:
     let_statement(token::token token) noexcept : _token(token) {}
     let_statement(const let_statement& other) noexcept = delete;
     let_statement& operator=(const let_statement& other) noexcept = delete;
+    ~let_statement() noexcept = default;
 
-    void move_ident(ast::identifier&& ident) { _ident = std::move(ident); }
-    void set_value(ast::expression* expr) noexcept { _value = std::unique_ptr<expression>(expr); }
+    void move_ident(identifier&& ident) { _ident = std::move(ident); }
+    void set_value(expression* expr) noexcept { _value = std::shared_ptr<expression>(expr); }
 
-    ast::expression* value() const noexcept { return _value.get(); }
+    std::shared_ptr<const expression> value() const noexcept { return _value; }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { 
@@ -96,22 +97,21 @@ public:
         return buf; 
     }
 
-    const ast::identifier& ident() const noexcept { return _ident; }
+    const identifier& ident() const noexcept { return _ident; }
     const token::token& token() const noexcept { return _token; }
 
 protected:
     token::token                _token;
-    ast::identifier             _ident;
-    std::unique_ptr<expression> _value;
+    identifier                  _ident;
+    std::shared_ptr<expression> _value;
 };
 
 class return_statement : public statement { 
 public:
     return_statement(token::token token) noexcept : _token(token) {}
 
-    ast::expression* return_value() const noexcept { return _return_value.get(); }
-
-    void set_return_value(ast::expression* rv) noexcept { _return_value = std::unique_ptr<ast::expression>(rv); }
+    std::shared_ptr<const expression> return_value() const noexcept { return _return_value; }
+    void set_return_value(expression* rv) noexcept { _return_value = std::shared_ptr<expression>(rv); }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { 
@@ -126,12 +126,13 @@ public:
     
 protected:
     token::token                _token;
-    std::unique_ptr<expression> _return_value;
+    std::shared_ptr<expression> _return_value;
 };
 
 class expression_statement : public statement {
 public:    
     expression_statement(token::token token) noexcept : _token(token) {}
+
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { 
         std::string buf;
@@ -141,23 +142,22 @@ public:
         return buf; 
     }
 
-    void move_expr(ast::expression* expr) noexcept { _expr = std::unique_ptr<expression>(expr); }
-    expression* expr() const noexcept { return _expr.get(); } // not const, might cause trouble?
+    void move_expr(expression* expr) noexcept { _expr = std::shared_ptr<expression>(expr); }
+    std::shared_ptr<const expression> expr() const noexcept { return _expr; } 
 
 protected:
     token::token                _token; // first token of the expression
-    std::unique_ptr<expression> _expr;
+    std::shared_ptr<expression> _expr;
 };
 
 class int_literal : public expression {
 public:    
     int_literal() noexcept = default;
     int_literal(token::token token, std::int64_t value) noexcept : _token(token), _value(value) {}
+    ~int_literal() noexcept = default;
 
     int_literal(const int_literal& other) noexcept = delete;
     int_literal& operator=(const int_literal& other) noexcept = delete;
-    int_literal(int_literal&& other) noexcept = default;
-    int_literal& operator=(int_literal&& other) noexcept = default;
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override { return std::to_string(_value); }
@@ -172,7 +172,7 @@ class prefix_expression : public expression {
 public:
     prefix_expression() noexcept = default;
     prefix_expression(token::token token, std::string_view op) noexcept : _token(token), _op(std::string(op)) {}
-    
+
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
         std::string buf;
@@ -184,19 +184,19 @@ public:
     }
 
     std::string_view op() const noexcept { return _op; }
-    expression* expr() const noexcept { return _expr.get(); }
-    void set_expr(ast::expression* expr) noexcept { _expr = std::unique_ptr<ast::expression>(expr); }
+    std::shared_ptr<const expression> expr() const noexcept { return _expr; }
+    void set_expr(expression* expr) noexcept { _expr = std::shared_ptr<expression>(expr); }
     
 protected:
-    token::token                        _token;
-    std::string                         _op;
-    std::unique_ptr<ast::expression>    _expr; 
+    token::token                    _token;
+    std::string                     _op;
+    std::shared_ptr<expression>     _expr; 
 };
 
 class infix_expression : public expression {
 public: 
     infix_expression() noexcept = default;
-    infix_expression(token::token token, std::string_view op, ast::expression* l_expr) noexcept
+    infix_expression(token::token token, std::string_view op, expression* l_expr) noexcept
         : _token(token), _op(std::string(op)), _l_expr(l_expr) {}
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
@@ -211,16 +211,16 @@ public:
     }
 
     std::string_view op() const noexcept { return _op; }
-    expression* l_expr() const noexcept { return _l_expr.get(); }
-    expression* r_expr() const noexcept { return _r_expr.get(); }
-    void left_expr(ast::expression* l_expr) { _l_expr = std::unique_ptr<ast::expression>(l_expr); }
-    void right_expr(ast::expression* r_expr) { _r_expr = std::unique_ptr<ast::expression>(r_expr); }
+    std::shared_ptr<const expression> l_expr() const noexcept { return _l_expr; }
+    std::shared_ptr<const expression> r_expr() const noexcept { return _r_expr; }
+    void left_expr(expression* l_expr) { _l_expr = std::shared_ptr<expression>(l_expr); }
+    void right_expr(expression* r_expr) { _r_expr = std::shared_ptr<expression>(r_expr); }
 
 protected:
-    token::token                        _token; // the operator token (e.g. +, -, etc.)
-    std::string                         _op;
-    std::unique_ptr<ast::expression>    _l_expr;
-    std::unique_ptr<ast::expression>    _r_expr;
+    token::token                    _token; // the operator token (e.g. +, -, etc.)
+    std::string                     _op;
+    std::shared_ptr<expression>     _l_expr;
+    std::shared_ptr<expression>     _r_expr;
 };
 
 class boolean : public expression {
@@ -240,9 +240,9 @@ protected:
 
 class block_statement : public statement {
 public:
-    const std::vector<std::unique_ptr<ast::statement>>& statements() const noexcept { return _statements; }
+    const std::vector<std::shared_ptr<statement>>& statements() const noexcept { return _statements; }
 
-    void add_statement(ast::statement* stmt) noexcept { _statements.push_back(std::unique_ptr<ast::statement>(stmt)); }
+    void add_statement(statement* stmt) noexcept { _statements.push_back(std::shared_ptr<statement>(stmt)); }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
@@ -255,7 +255,7 @@ public:
 
 protected:
     token::token                                    _token; // the '{' token
-    std::vector<std::unique_ptr<ast::statement>>    _statements;
+    std::vector<std::shared_ptr<statement>>    _statements;
 };
 
 class if_expression : public expression {
@@ -263,16 +263,16 @@ public:
     if_expression() noexcept = default;
     if_expression(token::token token) noexcept : _token(token) {}
     
-    ast::expression* condition() const noexcept { return _condition.get(); }
-    ast::block_statement* consequence() const noexcept { return _consequence.get(); }
-    ast::block_statement* alternative() const noexcept { return _alternative.get(); }
+    std::shared_ptr<const expression> condition() const noexcept { return _condition; }
+    std::shared_ptr<const block_statement> consequence() const noexcept { return _consequence; }
+    std::shared_ptr<const block_statement> alternative() const noexcept { return _alternative; }
 
-    void set_condition(ast::expression* expr) noexcept { _condition = std::unique_ptr<ast::expression>(expr); }
-    void set_consequence(ast::block_statement* consequence) noexcept { 
-        _consequence = std::unique_ptr<ast::block_statement>(consequence);
+    void set_condition(expression* expr) noexcept { _condition = std::shared_ptr<expression>(expr); }
+    void set_consequence(block_statement* consequence) noexcept { 
+        _consequence = std::shared_ptr<block_statement>(consequence);
     }
-    void set_alternative(ast::block_statement* alternative) noexcept {
-        _alternative = std::unique_ptr<ast::block_statement>(alternative);
+    void set_alternative(block_statement* alternative) noexcept {
+        _alternative = std::shared_ptr<block_statement>(alternative);
     }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
@@ -291,9 +291,9 @@ public:
 
 protected:
     token::token                            _token; // the 'if' token
-    std::unique_ptr<ast::expression>        _condition;
-    std::unique_ptr<ast::block_statement>   _consequence;
-    std::unique_ptr<ast::block_statement>   _alternative;
+    std::shared_ptr<expression>        _condition;
+    std::shared_ptr<block_statement>   _consequence;
+    std::shared_ptr<block_statement>   _alternative;
 };
 
 class function_literal : public expression {
@@ -301,16 +301,17 @@ public:
     function_literal() noexcept = default;
     function_literal(token::token token) noexcept : _token(token) {};
     
-    const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
-    ast::block_statement* body() const noexcept { return _body.get(); }
+    const std::vector<std::shared_ptr<identifier>>& parameters() const noexcept { return _parameters; }
+    std::vector<std::shared_ptr<identifier>> move_parameters() const noexcept { return std::move(_parameters); }
+    std::shared_ptr<const block_statement> body() const noexcept { return _body; }
 
-    void set_parameters(std::vector<ast::identifier*> stmt) noexcept {
+    void set_parameters(std::vector<identifier*> stmt) noexcept {
         _parameters.clear();
-        for(ast::identifier* s : stmt) {
-            _parameters.push_back(std::unique_ptr<ast::identifier>(s));
+        for(identifier* s : stmt) {
+            _parameters.push_back(std::shared_ptr<identifier>(s));
         }
     }
-    void set_body(ast::block_statement* stmt) noexcept { _body = std::unique_ptr<ast::block_statement>(stmt); }
+    void set_body(block_statement* stmt) noexcept { _body = std::shared_ptr<block_statement>(stmt); }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
@@ -326,27 +327,30 @@ public:
     }
 
 protected:
-    token::token                                    _token;
-    std::unique_ptr<ast::block_statement>           _body;
-    std::vector<std::unique_ptr<ast::identifier>>   _parameters;
+    token::token                                        _token;
+    std::shared_ptr<block_statement>                    _body;
+    mutable std::vector<std::shared_ptr<identifier>>    _parameters; // marked mutable to be moved to object::function
+                                                                     // so that when the ast::fn_literal object is
+                                                                     // deallocated, the identifiers don't get deallocated
+                                                                     // with it.
 };
 
 class call_expression : public expression {
 public:
     call_expression() noexcept = default;
-    call_expression(token::token token, ast::expression* function) noexcept : _token(token) { set_function(function); }
+    call_expression(token::token token, expression* function) noexcept : _token(token) { set_function(function); }
 
-    const std::vector<std::unique_ptr<ast::expression>>& arguments() noexcept { return _arguments; }
+    const std::vector<std::shared_ptr<expression>>& arguments() const noexcept { return _arguments; }
 
-    ast::expression* function() const noexcept { return _function.get(); }
+    std::shared_ptr<const expression> function() const noexcept { return _function; }
 
-    void set_arguments(std::vector<ast::expression*> stmt) noexcept {
+    void set_arguments(std::vector<expression*> stmt) noexcept {
         _arguments.clear();
-        for(ast::expression* s : stmt) {
-            _arguments.push_back(std::unique_ptr<ast::expression>(s));
+        for(expression* s : stmt) {
+            _arguments.push_back(std::shared_ptr<expression>(s));
         }
     }
-    void set_function(ast::expression* stmt) noexcept { _function = std::unique_ptr<ast::expression>(stmt); }
+    void set_function(expression* stmt) noexcept { _function = std::shared_ptr<expression>(stmt); }
     
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
@@ -362,9 +366,9 @@ public:
     }
     
 protected:
-    token::token                                    _token; // the '(' token
-    std::unique_ptr<ast::expression>                _function; // ident or fn literal
-    std::vector<std::unique_ptr<ast::expression>>   _arguments;
+    token::token                                _token; // the '(' token
+    std::shared_ptr<expression>                 _function; // ident or fn literal
+    std::vector<std::shared_ptr<expression>>    _arguments;
 };
 
 class string_literal : public expression {
@@ -386,12 +390,12 @@ class array_literal : public expression {
 public:
     array_literal(token::token token) noexcept : _token(token) {}
 
-    const std::vector<std::unique_ptr<ast::expression>>& elements() const noexcept { return _elements; }
+    const std::vector<std::shared_ptr<expression>>& elements() const noexcept { return _elements; }
 
-    void set_elements(std::vector<ast::expression*> expr_list) noexcept {
+    void set_elements(std::vector<expression*> expr_list) noexcept {
         _elements.clear();
-        for(ast::expression* expr : expr_list) {
-            _elements.push_back(std::unique_ptr<ast::expression>(expr));
+        for(expression* expr : expr_list) {
+            _elements.push_back(std::shared_ptr<expression>(expr));
         }
     }
 
@@ -408,20 +412,20 @@ public:
     }
 
 protected:
-    token::token                                    _token; // the '[ token
-    std::vector<std::unique_ptr<ast::expression>>   _elements;
+    token::token                                _token; // the '[ token
+    std::vector<std::shared_ptr<expression>>    _elements;
 
 }; 
 
 class index_expression : public expression {
 public:
-    index_expression(token::token token, ast::expression* left) noexcept : _token(token) { set_left(left); }
+    index_expression(token::token token, expression* left) noexcept : _token(token) { set_left(left); }
 
-    ast::expression* left() const noexcept { return _left.get(); }
-    ast::expression* index() const noexcept { return _index.get(); }
+    std::shared_ptr<const expression> left() const noexcept { return _left; }
+    std::shared_ptr<const expression> index() const noexcept { return _index; }
 
-    void set_left(ast::expression* left) noexcept { _left = std::unique_ptr<ast::expression>(left); }
-    void set_index(ast::expression* index) noexcept { _index = std::unique_ptr<ast::expression>(index); }
+    void set_left(expression* left) noexcept { _left = std::shared_ptr<expression>(left); }
+    void set_index(expression* index) noexcept { _index = std::shared_ptr<expression>(index); }
 
     const std::string_view token_literal() const noexcept override { return _token.token_literal(); }
     const std::string to_string() const noexcept override {
@@ -436,8 +440,8 @@ public:
 
 protected: 
     token::token                        _token; // the '[ token
-    std::unique_ptr<ast::expression>    _left;
-    std::unique_ptr<ast::expression>    _index;
+    std::shared_ptr<expression>         _left;
+    std::shared_ptr<expression>         _index;
 };
 
 } // namespace ast

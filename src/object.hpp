@@ -26,7 +26,6 @@ struct object {
 
 using builtin_fn_t = std::function<object*(std::vector<object*>)>;
 
-
 class scope {
 public:
     scope() noexcept = default;
@@ -37,7 +36,7 @@ public:
      */
     scope(scope* outer) noexcept : _outer(outer) {}
 
-    object* get(std::string_view name) const noexcept {
+    object* get(std::string name) const noexcept {
         auto it = _store.find(name);
         if(it == _store.end() && _outer != nullptr) {
             return _outer->get(name);
@@ -47,7 +46,7 @@ public:
         return it->second;
     }
 
-    object* set(std::string_view name, object* val) noexcept {
+    object* set(std::string name, object* val) noexcept {
         _store[name] = val;
         return val;
     }
@@ -73,14 +72,14 @@ public:
 
 protected:
     scope*                                          _outer;
-    std::unordered_map<std::string_view, object*>   _store;
+    std::unordered_map<std::string, object*>        _store;
 };
-
 
 class integer : public object {
 public:
     integer() noexcept = default;
     integer(std::int64_t value) noexcept : _value(value), _to_string(std::to_string(value)) {}
+    ~integer() noexcept = default;
 
     std::int64_t value() const noexcept { return _value; } 
 
@@ -121,14 +120,14 @@ private:
 
 class return_value : public object {
 public:
-    return_value(std::unique_ptr<object> value) noexcept : _value(std::move(value)) {}
+    return_value(std::shared_ptr<object> value) noexcept : _value(value) {}
     
     object* value() const noexcept { return _value.get(); }
 
     const std::string& inspect() const noexcept { return _value->inspect(); }
     const object_t& type() const noexcept { return RETURN_VALUE_OBJ; }
 private:
-    std::unique_ptr<object> _value;
+    std::shared_ptr<object> _value;
 };
 
 
@@ -147,11 +146,12 @@ private:
 
 class function : public object {
 public:
-    function(const std::vector<std::unique_ptr<ast::identifier>>& parameters, ast::block_statement* body, scope* scope) 
-        noexcept : _parameters(parameters), _body(body), _scope(scope) { build_to_string(); }
+    function(std::vector<std::shared_ptr<ast::identifier>> parameters, 
+            std::shared_ptr<const ast::block_statement> body, scope* scope) 
+        noexcept : _parameters(std::move(parameters)), _body(body), _scope(scope) { build_to_string(); }
 
-    const std::vector<std::unique_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
-    ast::block_statement* body() const noexcept { return _body; }
+    const std::vector<std::shared_ptr<ast::identifier>>& parameters() const noexcept { return _parameters; }
+    std::shared_ptr<const ast::block_statement> body() const noexcept { return _body; }
     scope* get_scope() const noexcept { return _scope; }
 
     const std::string& inspect() const noexcept { return _to_string; }
@@ -169,8 +169,8 @@ private:
 
     scope*                                                  _scope;
     std::string                                             _to_string;
-    ast::block_statement*                                   _body;
-    const std::vector<std::unique_ptr<ast::identifier>>&    _parameters;
+    std::shared_ptr<const ast::block_statement>             _body;
+    std::vector<std::shared_ptr<ast::identifier>>           _parameters;
 };
 
 
@@ -208,12 +208,12 @@ class array : public object {
 public:
     array(std::vector<object*> elements) noexcept {
         for(object* e : elements) {
-            _elements.push_back(std::unique_ptr<object>(e));
+            _elements.push_back(std::shared_ptr<object>(e));
         }
         build_to_string();
     };
 
-    const std::vector<std::unique_ptr<object>>& elements() const noexcept { return _elements; }
+    const std::vector<std::shared_ptr<object>>& elements() const noexcept { return _elements; }
 
     const object_t& type() const noexcept { return ARRAY_OBJ; }
     const std::string& inspect() const noexcept { return _to_string; }
@@ -229,7 +229,7 @@ private:
     }
 
     std::string                             _to_string;
-    std::vector<std::unique_ptr<object>>    _elements;
+    std::vector<std::shared_ptr<object>>    _elements;
 };
 
 } // namespace object

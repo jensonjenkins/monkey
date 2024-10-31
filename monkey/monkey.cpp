@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <chrono>
 
 bool check_parser_errors(parser::parser p) {
     std::vector<std::string> errors = p.errors();
@@ -24,6 +25,8 @@ int main() {
     std::string input;
     std::ostringstream oss;
 
+    auto s = std::chrono::high_resolution_clock::now();
+
     while (std::getline(std::cin, input)) {
         oss << input << "\n"; 
     }
@@ -33,7 +36,7 @@ int main() {
 
     lexer::lexer l(cstr_input);
     parser::parser p(l);
-    ast::program* program = p.parse_program();
+    std::shared_ptr<const ast::program> program(p.parse_program());
     if(!check_parser_errors(p)) {
         exit(EXIT_FAILURE);
     }
@@ -43,6 +46,13 @@ int main() {
     if(evaluated != nullptr){
         std::cout<<evaluated->inspect()<<std::endl;
     }
-    
+
+    auto e = std::chrono::high_resolution_clock::now();
+    std::cout
+        << "time: "
+        << std::chrono::duration_cast<std::chrono::microseconds>(e - s).count()
+        << " micro s"
+        << std::endl;
+ 
     return 0;
 }

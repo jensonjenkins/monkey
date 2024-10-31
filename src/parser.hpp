@@ -77,9 +77,6 @@ public:
         register_infix_fn(token::LBRACKET,  [this](ast::expression* a) -> ast::expression* { return this->parse_index_expr(a); });
     }
 
-    /**
-     * NOTE: Caller is responsible for management of ast::program*
-     */
     ast::program* parse_program() noexcept {
         ast::program* program = new ast::program();
  
@@ -93,9 +90,6 @@ public:
         return program;
     }
 
-    /**
-     * NOTE: Caller is responsible for management of ast::statement* 
-     */
     ast::statement* parse_statement() noexcept { 
         switch(_cur_token.get_type()){
         case token::LET:

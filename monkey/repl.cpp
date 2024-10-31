@@ -2,7 +2,6 @@
 #include "../src/object.hpp"
 #include "../src/evaluator.hpp"
 #include "../src/parser.hpp"
-#include <iostream>
 #include <cstdlib>
 #include <string>
 
@@ -31,11 +30,10 @@ int main() {
 
         lexer::lexer l(input);
         parser::parser p(l);
-        ast::program* program = p.parse_program();
+        std::shared_ptr<const ast::program> program (p.parse_program());
         if(!check_parser_errors(p)) {
             continue;
         }
-
         object::object* evaluated = evaluator::eval(program, scope);
         if(evaluated != nullptr){
             std::cout<<evaluated->inspect()<<std::endl;

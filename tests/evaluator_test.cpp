@@ -34,7 +34,7 @@ void assert_value(const T &actual, const V &expected, std::string err_msg) {
 const object::object *test_eval(const char *input) {
   lexer::lexer l(input);
   parser::parser p(l);
-  ast::program *program = p.parse_program();
+  std::shared_ptr<ast::program> program(p.parse_program());
   object::scope *scope = new object::scope();
 
   return evaluator::eval(program, scope);
