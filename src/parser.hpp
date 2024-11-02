@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
-#include <type_traits>
+#include <cassert>
 #include <unordered_map>
 
 namespace parser {

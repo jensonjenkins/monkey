@@ -2,6 +2,7 @@
 
 #include "ast.hpp"
 #include <string>
+#include <functional>
 
 namespace object {
 
