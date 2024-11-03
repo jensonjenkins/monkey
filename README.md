@@ -67,6 +67,12 @@ return iterate(0, 5, a, 0);
 ~/monkey$ ./build/monkey < ./examples/basic_functions.ky
 
 ```
+### TODOs:
+- Custom allocator (stack based allocators for fixed size objects)
+- Organize lifetime of object::object
+- Support for stdout
+- More data structures (maps, sets)
+- More builtin_fns (filter, sort, print, etc)
 
 
 
